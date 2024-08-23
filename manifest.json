@@ -1,0 +1,11 @@
+{
+  "addons": [
+    {
+      "id": "vim",
+      "description": "Turns lite-xl into a terminal based editor.",
+      "version": "0.1",
+      "path": "vim.lua",
+      "modversion": "4"
+    }
+  ]
+}
