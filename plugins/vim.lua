@@ -4,6 +4,8 @@ local core = require "core"
 local config = require "core.config"
 local style = require "core.style"
 
+local vim_native = require "plugins.vim.libvim"
+
 local dimensions = { x = 80, y = 24 }
 
 style.padding.x = 0
@@ -91,7 +93,7 @@ renderer.draw_text = function(font, string, x, y, color)
   if type(string) == 'number' then string = tostring(string) end
   if x and y then
     if not color or not color[4] or color[4] > 0 then
-      if y and y >= clip.y and y < clip.y + clip.h then
+      if y and y >= clip.y and y <= clip.y + clip.h then
         io.stdout:write(jump_to(x, y))
         local bg = get_background(x, y)
         io.stdout:write(emit_color_background(bg and bg.c or "reset"))
