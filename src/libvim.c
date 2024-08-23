@@ -9,8 +9,11 @@
 #else
   #include <unistd.h>
   #include <fcntl.h>
+  #include <math.h>
   #include <sys/ioctl.h>
   #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <sys/select.h>
   #if __APPLE__
     #include <util.h>
   #else
@@ -53,27 +56,33 @@ static int f_vim_isatty(lua_State *L) {
 }
 
 static int f_vim_read(lua_State* L) {
-  static int nonblocked = 0;
-  if (!nonblocked) {
-    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    if (flags == -1)
-      return luaL_error(L, "can't get flags for stdin");
-    flags = (flags | O_NONBLOCK);
-    fcntl(STDIN_FILENO, F_SETFL, flags);
-    nonblocked = 1;
-  }
+  double timeout = luaL_checknumber(L, 1);
+
+  fd_set set;
+  struct timeval tv = { .tv_sec = (int)timeout, .tv_usec = fmod(timeout, 1.0) * 100000 };
+  FD_ZERO(&set);
+  FD_SET(STDIN_FILENO, &set);
+  int rv = select(1, &set, NULL, NULL, &tv);
+  if (rv <= 0)
+    return 0;
   char block[1024];
   int length = read(STDIN_FILENO, block, sizeof(block));
   if (length >= 0) {
     lua_pushlstring(L, block, length);
     return 1;
   }
-  if (length == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
-    return 0;
   return luaL_error(L, "error getting input: %s", strerror(errno));
 }
 
+struct termios original_term = {0};
+int f_vim_gc(lua_State* L) {
+  if (isatty(STDIN_FILENO))
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
+  return 0;
+}
+
 static const luaL_Reg vim_api[] = {
+  { "__gc",    f_vim_gc      },
   { "size",    f_vim_size    },
   { "is_atty", f_vim_isatty  },
   { "read",    f_vim_read    },
@@ -81,11 +90,11 @@ static const luaL_Reg vim_api[] = {
 };
 
 
-#ifndef LIBTERMINAL_VERSION
-  #define LIBTERMINAL_VERSION "unknown"
+#ifndef LIBVIM_VERSION
+  #define LIBVIM_VERSION "unknown"
 #endif
 
-#ifndef LIBTERMINAL_STANDALONE
+#ifndef LIBVIM_STANDALONE
 int luaopen_lite_xl_libvim(lua_State* L, void* XL) {
   lite_xl_plugin_init(XL);
 #else
@@ -93,9 +102,19 @@ int luaopen_libvim(lua_State* L) {
 #endif
   luaL_newmetatable(L, "libvim");
   luaL_setfuncs(L, vim_api, 0);
-  lua_pushliteral(L, LIBTERMINAL_VERSION);
+  lua_pushliteral(L, LIBVIM_VERSION);
   lua_setfield(L, -2, "version");
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
+  lua_pushvalue(L, -1);
+  lua_setmetatable(L, -2);
+
+  struct termios term={0};
+  if (isatty(STDIN_FILENO)) {
+    tcgetattr(STDIN_FILENO, &original_term);
+    tcgetattr(STDIN_FILENO, &term);
+    term.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSANOW, &term);
+  }
   return 1;
 }

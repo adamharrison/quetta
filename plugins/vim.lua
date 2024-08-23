@@ -3,21 +3,17 @@
 local core = require "core"
 local config = require "core.config"
 local style = require "core.style"
+local common = require "core.common"
 
-local vim_native = require "plugins.vim.libvim"
+local libvim = require "plugins.vim.libvim"
 
-local dimensions = { x = 80, y = 24 }
+local size_x, size_y = libvim.size("stdout")
+style.padding = { x = 0, y = 0 }
 
-style.padding.x = 0
-style.padding.y = 0
-
-local clip = { x = 1, y = 1, x = 80, y = 24 }
-
-core.root_view.size.x = dimensions.x
-core.root_view.size.y = dimensions.y
+local clip = { x = 1, y = 1, x = size_x, y = size_y }
 
 function renwindow:get_size()
-  return dimensions.x, dimensions.y
+  return libvim.size("stdout")
 end
 
 local function jump_to(x, y)
@@ -54,12 +50,41 @@ renderer.begin_frame = function(...)
   io.stdout:write(emit_color_foreground("reset"))
   io.stdout:write(emit_color_background("reset"))
   io.stdout:write("\x1B[2J")
-  io.stdout:flush()
   jump_to(1, 1)
 end
 
 renderer.end_frame = function(...)
-  io.stdin:read("*line")
+  io.stdout:flush()
+end
+
+local old_step = core.step
+local accumulator = ""
+
+local old_poll = system.poll_event
+
+function system.poll_event()
+  if #accumulator > 0 then
+    local n = accumulator
+    if n:find("%W") then
+      accumulator = ""
+      return "textinput", n
+    else
+      accumulator = accumulator:sub(2)
+      return "keypressed", n:sub(1, 1)
+    end
+  else
+    return old_poll()
+  end
+end
+
+core.step = function()
+  local did_redraw = old_step()
+  local read = libvim.read(0.1)
+  if read then
+    accumulator = accumulator .. read
+    core.redraw = true
+  end
+  return true
 end
 
 renderer.set_clip_rect = function(x, y, w, h) clip = { x = x, y = y, w = w, h = h } end
