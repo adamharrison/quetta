@@ -12,9 +12,8 @@ style.padding = { x = 0, y = 0 }
 
 local clip = { x = 1, y = 1, x = size_x, y = size_y }
 
-function renwindow:get_size()
-  return libvim.size("stdout")
-end
+function system.window_has_focus(window) return true end
+function renwindow:get_size() return libvim.size("stdout") end
 
 local function jump_to(x, y)
   return "\x1B[" .. math.floor(y + 1) .. ";" .. math.floor(x + 1) .. "H"
@@ -44,8 +43,10 @@ renderer.font.get_height = function()
 end
 
 local backgrounds = {}
+local size_x, size_y
 
 renderer.begin_frame = function(...)
+  size_x, size_y = libvim.size("stdout")
   backgrounds = {}
   io.stdout:write(emit_color_foreground("reset"))
   io.stdout:write(emit_color_background("reset"))
@@ -62,25 +63,36 @@ local accumulator = ""
 
 local old_poll = system.poll_event
 
+local translations = {
+  ["A"] = "up",
+  ["B"] = "down",
+  ["C"] = "right",
+  ["D"] = "left"
+}
+
 function system.poll_event()
-  if #accumulator > 0 then
-    local n = accumulator
-    if n:find("%W") then
-      accumulator = ""
-      return "textinput", n
-    else
-      accumulator = accumulator:sub(2)
-      return "keypressed", n:sub(1, 1)
-    end
-  else
-    return old_poll()
+  if #accumulator == 0 then return old_poll() end
+  local n = accumulator
+  if n:find("^[%w%s%.!@#$%%%^&%*%(%)'\"]") then
+    accumulator = ""
+    return "textinput", n
   end
+  local s,e,c = accumulator:find("^\x1B%[(%w)")
+  if s and translations[c] then
+    accumulator = accumulator:sub(e+1)
+    return "keypressed", translations[c]
+  end
+  accumulator = accumulator:sub(2)
+  local translation = n:sub(1,1)
+  if translation == "\x7F" then translation = "backspace" end
+  return "keypressed", translation
 end
 
 core.step = function()
   local did_redraw = old_step()
-  local read = libvim.read(0.1)
+  local read = libvim.read(config.blink_period / 2)
   if read then
+    io.open("/tmp/test", "ab"):write(read):close()
     accumulator = accumulator .. read
     core.redraw = true
   end
@@ -94,14 +106,12 @@ renderer.draw_rect = function(x, y, w, h, color)
   local sy = math.max(y, clip.y)
   local sxe = math.min(x + w, clip.x + clip.w)
   local sye = math.min(y + h, clip.y + clip.h)
-  io.stdout:write(emit_color_background(color))
-  if sx >= sxe and sy >= sye then
-    table.insert(backgrounds, { x = sx, y = sy, w = sxe - sx + 1, h = sye - sy + 1, c = color })
-  end
   for ny = sy, sye - 1 do
-    io.stdout:write(jump_to(x, y))
+    io.stdout:write(jump_to(sx, ny))
     for nx = sx, sxe - 1 do
+      io.stdout:write(emit_color_background(color))
       io.stdout:write(" ")
+      backgrounds[ny*size_y + nx] = color
     end
   end
   io.stdout:flush()
@@ -120,15 +130,13 @@ renderer.draw_text = function(font, string, x, y, color)
     if not color or not color[4] or color[4] > 0 then
       if y and y >= clip.y and y <= clip.y + clip.h then
         io.stdout:write(jump_to(x, y))
-        local bg = get_background(x, y)
-        io.stdout:write(emit_color_background(bg and bg.c or "reset"))
+        io.stdout:write(emit_color_background(backgrounds[y*size_y + x] or "reset"))
         io.stdout:write(emit_color_foreground(color))
         local s = math.max(clip.x - x, 0) + 1
         local e = math.min(clip.x + clip.w, x + string:ulen()) - x
         local str = string:usub(s, e)
         if #str > 0 then
           io.stdout:write(str)
-          io.stdout:flush()
         end
       end
     end
@@ -136,5 +144,7 @@ renderer.draw_text = function(font, string, x, y, color)
   return x + string:ulen()
 end
 
+style.caret_width = 1
+style.tab_width = 4
 config.plugins.treeview.visible = false
 core.window_mode = "maximized"

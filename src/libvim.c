@@ -76,8 +76,10 @@ static int f_vim_read(lua_State* L) {
 
 struct termios original_term = {0};
 int f_vim_gc(lua_State* L) {
-  if (isatty(STDIN_FILENO))
+  if (isatty(STDIN_FILENO)) {
+    original_term.c_lflag |= (ECHO | ICANON);
     tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
+  }
   return 0;
 }
 
