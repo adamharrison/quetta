@@ -15,21 +15,8 @@ local clip = { x = 1, y = 1, x = size_x, y = size_y }
 function system.window_has_focus(window) return true end
 function renwindow:get_size() return libvim.size("stdout") end
 
-local function jump_to(x, y)
-  return "\x1B[" .. math.floor(y + 1) .. ";" .. math.floor(x + 1) .. "H"
-end
-
 local function translate_color(color)
   return (math.floor(color[1] * 5 / 256 + 0.5) * 36) + (math.floor((color[2] / 256 * 5 + 0.5)) * 6) + math.floor((color[3] / 256 * 5 + 0.5)) + 16
-end
-
-local function emit_color_foreground(color)
-  if color == "reset" then return "\x1B[39m" end
-  return "\x1B[38;5;" .. translate_color(color) .. "m"
-end
-local function emit_color_background(color)
-  if color == "reset" then return "\x1B[49m" end
-  return "\x1B[48;5;" .. translate_color(color) .. "m"
 end
 
 
@@ -42,19 +29,26 @@ renderer.font.get_height = function()
   return 1
 end
 
-local backgrounds = {}
+local frame = {
+  backgrounds = {},
+  colors = {},
+  text = {}
+}
 local size_x, size_y
+local old_size_x, old_size_y
 
 renderer.begin_frame = function(...)
+  os.remove("/tmp/wat")
   size_x, size_y = libvim.size("stdout")
-  backgrounds = {}
-  io.stdout:write(emit_color_foreground("reset"))
-  io.stdout:write(emit_color_background("reset"))
-  io.stdout:write("\x1B[2J")
-  jump_to(1, 1)
+  if old_size_x ~= size_x or old_size_y ~= size_y then
+    io.stdout:write("\x1B[2J")
+  end
+  libvim.begin_frame()
 end
 
 renderer.end_frame = function(...)
+  libvim.end_frame()
+  old_size_x, old_size_y = size_x, size_y
   io.stdout:flush()
 end
 
@@ -102,43 +96,24 @@ end
 renderer.set_clip_rect = function(x, y, w, h) clip = { x = x, y = y, w = w, h = h } end
 
 renderer.draw_rect = function(x, y, w, h, color)
-  local sx = math.max(x, clip.x)
-  local sy = math.max(y, clip.y)
-  local sxe = math.min(x + w, clip.x + clip.w)
-  local sye = math.min(y + h, clip.y + clip.h)
-  for ny = sy, sye - 1 do
-    io.stdout:write(jump_to(sx, ny))
-    for nx = sx, sxe - 1 do
-      io.stdout:write(emit_color_background(color))
-      io.stdout:write(" ")
-      backgrounds[ny*size_y + nx] = color
-    end
+  local sx = math.floor(math.max(x, clip.x))
+  local sy = math.floor(math.max(y, clip.y))
+  local sw = math.floor(math.min(x + w, clip.x + clip.w)) - sx
+  local sh = math.floor(math.min(y + h, clip.y + clip.h)) - sy
+  if sw > 0 and sh > 0 then
+    libvim.draw_rect(sx, sy, sw, sh, translate_color(color))
   end
-  io.stdout:flush()
-end
-
-local function get_background(x, y)
-  for i,v in ipairs(backgrounds) do
-    if x >= v.x and x < v.x + v.w and y >= v.y and y < v.y + v.h then return v end
-  end
-  return nil
 end
 
 renderer.draw_text = function(font, string, x, y, color)
   if type(string) == 'number' then string = tostring(string) end
-  if x and y then
-    if not color or not color[4] or color[4] > 0 then
-      if y and y >= clip.y and y <= clip.y + clip.h then
-        io.stdout:write(jump_to(x, y))
-        io.stdout:write(emit_color_background(backgrounds[y*size_y + x] or "reset"))
-        io.stdout:write(emit_color_foreground(color))
-        local s = math.max(clip.x - x, 0) + 1
-        local e = math.min(clip.x + clip.w, x + string:ulen()) - x
-        local str = string:usub(s, e)
-        if #str > 0 then
-          io.stdout:write(str)
-        end
-      end
+  if x and y and (not color or not color[4] or color[4] > 0) or (y and y >= clip.y and y < clip.y + clip.h) then
+    local s = math.max(clip.x - x, 0) + 1
+    local e = math.min(clip.x + clip.w, x + string:ulen()) - x
+    local str = string:usub(s, e)
+    if #str > 0 then
+      io.open("/tmp/wat", "ab"):write(string.format("STR: %d %d %s\n", math.floor(x), math.floor(y), str)):close()
+      libvim.draw_text(font, str, math.floor(x), math.floor(y), translate_color(color))
     end
   end
   return x + string:ulen()
@@ -148,3 +123,4 @@ style.caret_width = 1
 style.tab_width = 4
 config.plugins.treeview.visible = false
 core.window_mode = "maximized"
+config.transitions = false
