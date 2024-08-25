@@ -109,7 +109,7 @@ static int f_vim_read(lua_State* L) {
 struct termios original_term = {0};
 int f_vim_gc(lua_State* L) {
   if (isatty(STDIN_FILENO)) {
-    original_term.c_lflag |= (ECHO | ICANON);
+    original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
     tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
     fprintf(stdout, "\x1B[?25h");
     fprintf(stdout, "\x1B[?47l");
@@ -268,7 +268,8 @@ int luaopen_libvim(lua_State* L) {
   if (isatty(STDIN_FILENO)) {
     tcgetattr(STDIN_FILENO, &original_term);
     tcgetattr(STDIN_FILENO, &term);
-    term.c_lflag &= ~(ECHO | ICANON);
+    term.c_lflag &= ~(ECHO | ICANON | ISIG | IXON | IEXTEN);
+    term.c_iflag &= ~(IXON);
     tcsetattr(STDIN_FILENO, TCSANOW, &term);
     fprintf(stdout, "\x1B[?25l"); // Disable curosr.
     fprintf(stdout, "\x1B[?47h"); // Use alternate screen buffer.
