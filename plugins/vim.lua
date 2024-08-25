@@ -79,10 +79,12 @@ function system.poll_event()
   if #queued_releases > 0 then return "keyreleased", table.remove(queued_releases, 1) end
   if #accumulator == 0 then return old_poll() end
   local n = accumulator
-  if n:find("^[%w \t%.!@#$%%%^&%*%(%)'\"]") then
+  if n:find("^[%w \t%.!@#$%%%^&%*%(%)'\",:]") then
     accumulator = ""
     return "textinput", n
   end
+  if #accumulator == 2 and accumulator == "\x1B\x7F" then accumulator = "" table.insert(queued_presses, "left alt") table.insert(queued_presses, "backspace") return system.poll_event() end
+  if #accumulator == 1 and accumulator == "\x08" then accumulator = "" table.insert(queued_presses, "left ctrl") table.insert(queued_presses, "backspace") return system.poll_event() end
   if #accumulator == 1 and accumulator == "\x7F" then accumulator = "" return "keypressed", "backspace" end
   if #accumulator == 1 and accumulator == "\x1B" then accumulator = "" return "keypressed", "escape" end
   if #accumulator == 1 and accumulator == "\n" then accumulator = "" return "keypressed", "return" end
@@ -117,7 +119,7 @@ core.step = function()
   local did_redraw = old_step()
   local read = libvim.read(config.blink_period / 2)
   if read then
-    io.open("/tmp/test", "ab"):write(read):close()
+    -- io.open("/tmp/test", "ab"):write(read):close()
     accumulator = accumulator .. read
     core.redraw = true
   end
@@ -157,5 +159,4 @@ config.transitions = false
 
 keymap.add {
   ["ctrl+q"] = "core:quit",
-  ["escape"] = "core:quit"
 }
