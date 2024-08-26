@@ -1,4 +1,4 @@
-# vim-xl
+# quetta
 
 Turns lite-xl into a vim-like terminal-based editor.
 

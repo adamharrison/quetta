@@ -79,7 +79,7 @@ function system.poll_event()
   if #queued_releases > 0 then return "keyreleased", table.remove(queued_releases, 1) end
   if #accumulator == 0 then return old_poll() end
   local n = accumulator
-  if n:find("^[%w \t%.!@#$%%%^&%*%(%)'\",:]") then
+  if n:find("^[%w %.!@#$%%%^&%*%(%)'\",:]") then
     accumulator = ""
     return "textinput", n
   end
@@ -88,6 +88,7 @@ function system.poll_event()
   if #accumulator == 1 and accumulator == "\x7F" then accumulator = "" return "keypressed", "backspace" end
   if #accumulator == 1 and accumulator == "\x1B" then accumulator = "" return "keypressed", "escape" end
   if #accumulator == 1 and accumulator == "\n" then accumulator = "" return "keypressed", "return" end
+  if #accumulator == 1 and accumulator == "\t" then accumulator = "" return "keypressed", "tab" end
   if accumulator:find("^[\x01-\x20]") and not accumulator:sub(2,2):find("%[") then
     table.insert(queued_presses, "left ctrl")
     table.insert(queued_presses, string.char(96 + accumulator:byte(1)))
