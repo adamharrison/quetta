@@ -79,14 +79,6 @@ static int f_vim_size(lua_State* L) {
   return 2;
 }
 
-static int f_vim_isatty(lua_State *L) {
-  if (strcmp(luaL_checkstring(L, 1), "stdout") == 0) {
-    lua_pushboolean(L, isatty(STDOUT_FILENO));
-  } else {
-    lua_pushnil(L);
-  }
-  return 1;
-}
 
 static int f_vim_read(lua_State* L) {
   double timeout = luaL_checknumber(L, 1);
@@ -235,7 +227,6 @@ static int f_vim_end_frame(lua_State* L) {
 static const luaL_Reg vim_api[] = {
   { "__gc",        f_vim_gc          },
   { "size",        f_vim_size        },
-  { "is_atty",     f_vim_isatty      },
   { "read",        f_vim_read        },
   { "begin_frame", f_vim_begin_frame },
   { "end_frame",   f_vim_end_frame   },
