@@ -1,4 +1,4 @@
--- mod-version:4 priority:0
+-- mod-version:3 priority:0
 
 local core = require "core"
 local config = require "core.config"
@@ -7,15 +7,15 @@ local common = require "core.common"
 local keymap = require "core.keymap"
 local NagView = require "core.nagview"
 
-local libvim = require "plugins.vim.libvim"
+local libquetta = require "plugins.quetta.libquetta"
 
-local size_x, size_y = libvim.size("stdout")
+local size_x, size_y = libquetta.size("stdout")
 style.padding = { x = 0, y = 0 }
 
 local clip = { x = 1, y = 1, x = size_x, y = size_y }
 
 function system.window_has_focus(window) return true end
-function renwindow:get_size() return libvim.size("stdout") end
+function renwindow:get_size() return libquetta.size("stdout") end
 function NagView:get_buttons_height() return 1 end
 
 local function translate_color(color)
@@ -41,15 +41,15 @@ local size_x, size_y
 local old_size_x, old_size_y
 
 renderer.begin_frame = function(...)
-  size_x, size_y = libvim.size("stdout")
+  size_x, size_y = libquetta.size("stdout")
   if old_size_x ~= size_x or old_size_y ~= size_y then
     io.stdout:write("\x1B[2J")
   end
-  libvim.begin_frame()
+  libquetta.begin_frame()
 end
 
 renderer.end_frame = function(...)
-  libvim.end_frame()
+  libquetta.end_frame()
   old_size_x, old_size_y = size_x, size_y
   io.stdout:flush()
 end
@@ -117,7 +117,7 @@ end
 
 core.step = function()
   local did_redraw = old_step()
-  local read = libvim.read(config.blink_period / 2)
+  local read = libquetta.read(config.blink_period / 2)
   if read then
     -- io.open("/tmp/test", "ab"):write(read):close()
     accumulator = accumulator .. read
@@ -134,7 +134,7 @@ renderer.draw_rect = function(x, y, w, h, color)
   local sw = math.floor(math.min(x + w, clip.x + clip.w)) - sx
   local sh = math.floor(math.min(y + h, clip.y + clip.h)) - sy
   if sw > 0 and sh > 0 then
-    libvim.draw_rect(sx, sy, sw, sh, translate_color(color))
+    libquetta.draw_rect(sx, sy, sw, sh, translate_color(color))
   end
 end
 
@@ -145,7 +145,7 @@ renderer.draw_text = function(font, string, x, y, color)
     local e = math.min(clip.x + clip.w, x + string:ulen()) - x
     local str = string:usub(s, e)
     if #str > 0 then
-      libvim.draw_text(font, str, math.floor(x), math.floor(y), translate_color(color))
+      libquetta.draw_text(font, str, math.floor(x), math.floor(y), translate_color(color))
     end
   end
   return x + string:ulen()
@@ -153,9 +153,10 @@ end
 
 style.caret_width = 1
 style.tab_width = 4
-config.plugins.treeview.visible = false
+-- config.plugins.treeview.visible = false
 core.window_mode = "maximized"
 config.transitions = false
+config.plugins.treeview = false
 
 keymap.add {
   ["ctrl+q"] = "core:quit",

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 : ${CC=gcc}
-: ${BIN=libvim.so}
+: ${BIN=libquetta.so}
 
 CFLAGS="$CFLAGS -fPIC -Ilib/lite-xl/resources/include"
 LDFLAGS=""

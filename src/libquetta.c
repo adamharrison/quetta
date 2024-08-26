@@ -24,7 +24,7 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef LIBVIML_STANDALONE
+#ifdef LIBQUETTA_STANDALONE
   #include <lua.h>
   #include <lauxlib.h>
   #include <lualib.h>
@@ -64,7 +64,7 @@ static int display_resize(s_display* display, int x, int y) {
 }
 
 
-static int f_vim_size(lua_State* L) {
+static int f_quetta_size(lua_State* L) {
   if (strcmp(luaL_checkstring(L, 1), "stdout") == 0) {
     struct winsize size = {0};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
@@ -80,7 +80,7 @@ static int f_vim_size(lua_State* L) {
 }
 
 
-static int f_vim_read(lua_State* L) {
+static int f_quetta_read(lua_State* L) {
   double timeout = luaL_checknumber(L, 1);
   fd_set set;
   struct timeval tv = { .tv_sec = (int)timeout, .tv_usec = fmod(timeout, 1.0) * 100000 };
@@ -99,7 +99,7 @@ static int f_vim_read(lua_State* L) {
 }
 
 struct termios original_term = {0};
-int f_vim_gc(lua_State* L) {
+int f_quetta_gc(lua_State* L) {
   if (isatty(STDIN_FILENO)) {
     original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
     tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
@@ -129,7 +129,7 @@ static const char* utf8_to_codepoint(const char *p, unsigned *dst) {
 }
 
 
-static int f_vim_draw_text(lua_State* L) {
+static int f_quetta_draw_text(lua_State* L) {
   size_t length;
   const char* text = luaL_checklstring(L, 2, &length);
   const char* end = text + length;
@@ -147,7 +147,7 @@ static int f_vim_draw_text(lua_State* L) {
   return 0;
 }
 
-static int f_vim_draw_rect(lua_State* L) {
+static int f_quetta_draw_rect(lua_State* L) {
   int x = luaL_checkinteger(L, 1);
   int y = luaL_checkinteger(L, 2);
   int w = luaL_checkinteger(L, 3);
@@ -167,7 +167,7 @@ static int f_vim_draw_rect(lua_State* L) {
 }
 
 
-static int f_vim_begin_frame(lua_State* L) {
+static int f_quetta_begin_frame(lua_State* L) {
   return 0;
 }
 
@@ -194,7 +194,7 @@ static int codepoint_to_utf8(unsigned int codepoint, char* target) {
 
 
 
-static int f_vim_end_frame(lua_State* L) {
+static int f_quetta_end_frame(lua_State* L) {
   int cursor_position = -1;
   int foreground_color = -1;
   int background_color = -1;
@@ -224,31 +224,31 @@ static int f_vim_end_frame(lua_State* L) {
   return 0;
 }
 
-static const luaL_Reg vim_api[] = {
-  { "__gc",        f_vim_gc          },
-  { "size",        f_vim_size        },
-  { "read",        f_vim_read        },
-  { "begin_frame", f_vim_begin_frame },
-  { "end_frame",   f_vim_end_frame   },
-  { "draw_rect",   f_vim_draw_rect   },
-  { "draw_text",   f_vim_draw_text   },
+static const luaL_Reg quetta_api[] = {
+  { "__gc",        f_quetta_gc          },
+  { "size",        f_quetta_size        },
+  { "read",        f_quetta_read        },
+  { "begin_frame", f_quetta_begin_frame },
+  { "end_frame",   f_quetta_end_frame   },
+  { "draw_rect",   f_quetta_draw_rect   },
+  { "draw_text",   f_quetta_draw_text   },
   { NULL,      NULL                  }
 };
 
 
-#ifndef LIBVIM_VERSION
-  #define LIBVIM_VERSION "unknown"
+#ifndef LIBQUETTA_VERSION
+  #define LIBQUETTA_VERSION "unknown"
 #endif
 
-#ifndef LIBVIM_STANDALONE
-int luaopen_lite_xl_libvim(lua_State* L, void* XL) {
+#ifndef LIBQUETTA_STANDALONE
+int luaopen_lite_xl_libquetta(lua_State* L, void* XL) {
   lite_xl_plugin_init(XL);
 #else
-int luaopen_libvim(lua_State* L) {
+int luaopen_libquetta(lua_State* L) {
 #endif
-  luaL_newmetatable(L, "libvim");
-  luaL_setfuncs(L, vim_api, 0);
-  lua_pushliteral(L, LIBVIM_VERSION);
+  luaL_newmetatable(L, "libquetta");
+  luaL_setfuncs(L, quetta_api, 0);
+  lua_pushliteral(L, LIBQUETTA_VERSION);
   lua_setfield(L, -2, "version");
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
