@@ -1,5 +1,5 @@
 name: CI
-on: { push: { branches: [master] } }
+on: { push: { branches: [main] } }
 env:
   LPM_PLUGINS: https://raw.githubusercontent.com/adamharrison/lite-xl-maintenance/latest/lpm-plugins/gh.lua
 jobs:
