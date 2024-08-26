@@ -28,6 +28,7 @@ jobs:
         with: { fetch-depth: 0, submodules: true }
       - name: Build Linux
         run: |
+          sudo apt-get install -y gcc-9-aarch64-linux-gnu
           BIN=libquetta.x86_64-linux.so ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-x86_64-linux'"'
           BIN=libquetta.aarch64-linux.so CC=aarch64-linux-gnu-gcc ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-aarch64-linux'"'
       - name: Upload Artifacts
