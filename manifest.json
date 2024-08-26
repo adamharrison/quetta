@@ -3,9 +3,9 @@
     {
       "id": "quetta",
       "description": "Turns lite-xl into a terminal based editor.",
-      "version": "0.1",
+      "version": "0.01",
       "path": "plugins/quetta.lua",
-      "modversion": "4",
+      "modversion": "3",
       "files": [
         {
           "arch": "x86_64-linux",
