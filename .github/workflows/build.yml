@@ -22,7 +22,6 @@ jobs:
     permissions: write-all
     runs-on: ubuntu-latest
     defaults: { run: { shell: bash } }
-    container: ghcr.io/lite-xl/lite-xl-build-box:latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
