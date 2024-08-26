@@ -103,8 +103,12 @@ int f_quetta_gc(lua_State* L) {
   if (isatty(STDIN_FILENO)) {
     original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
     tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
+    fprintf(stdout, "\x1B[2J");
     fprintf(stdout, "\x1B[?25h");
     fprintf(stdout, "\x1B[?47l");
+    fprintf(stdout, "\x1B[39m");
+    fprintf(stdout, "\x1B[49m");
+    fprintf(stdout, "\r");
     fflush(stdout);
   }
   return 0;
