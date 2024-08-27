@@ -19,7 +19,9 @@ config.plugins.quetta = common.merge({
   -- the amount of time that must pass betwene clicks to separate a single click from a double-click
   click_interval = 0.3,
   -- restores the specific terminal configuration you had before this intiialized vs. best guess
-  restore = false
+  restore = false,
+  -- how many lines we should scroll by on mousewheel
+  scroll_speed = 5
 }, config.plugins.quetta)
 
 
@@ -105,11 +107,13 @@ function system.poll_event()
       modifier = modifier:byte() - 32
       accumulator = accumulator:sub(e + 1)
       x,y = x:byte() - 33, y:byte() - 33
-      if (modifier & 0x20) > 0 then
+      local button_id = modifier & 0x3
+      if (modifier & 0x40) > 0 then
+        return "mousewheel", (button_id == 0 and 1 or -1) * (1 / size_y) * config.plugins.quetta.scroll_speed, 0
+      elseif (modifier & 0x20) > 0 then
         return "mousemoved", x, y, x - last_cursor[1], y - last_cursor[2]
       else 
         last_cursor = { x, y }
-        local button_id = modifier & 0x2
         if button_id == 3 then
           local name = button_names[pressed_button]
           pressed_button = nil
