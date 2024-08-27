@@ -199,6 +199,7 @@ renderer.draw_rect = function(x, y, w, h, color)
 end
 
 renderer.draw_text = function(font, string, x, y, color)
+  string = tostring(string)
   if x and y and (not color or not color[4] or color[4] > 0) and (y and y >= clip.y and y < clip.y + clip.h) then
   if type(string) == 'number' then string = tostring(string) end
     local s = math.max(clip.x - x, 0) + 1
