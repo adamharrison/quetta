@@ -33,8 +33,6 @@
   #include <lite_xl_plugin_api.h>
 #endif
 
-
-/* 32bit fnv-1a hash */
 typedef struct {
   union {
     struct {
@@ -98,21 +96,6 @@ static int f_quetta_read(lua_State* L) {
   return luaL_error(L, "error getting input: %s", strerror(errno));
 }
 
-struct termios original_term = {0};
-int f_quetta_gc(lua_State* L) {
-  if (isatty(STDIN_FILENO)) {
-    original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
-    fprintf(stdout, "\x1B[2J");
-    fprintf(stdout, "\x1B[?25h");
-    fprintf(stdout, "\x1B[?47l");
-    fprintf(stdout, "\x1B[39m");
-    fprintf(stdout, "\x1B[49m");
-    fprintf(stdout, "\r");
-    fflush(stdout);
-  }
-  return 0;
-}
 
 
 static const char* utf8_to_codepoint(const char *p, unsigned *dst) {
@@ -170,11 +153,6 @@ static int f_quetta_draw_rect(lua_State* L) {
   return 0;
 }
 
-
-static int f_quetta_begin_frame(lua_State* L) {
-  return 0;
-}
-
 static int codepoint_to_utf8(unsigned int codepoint, char* target) {
   if (codepoint < 128) {
     *(target++) = codepoint;
@@ -225,18 +203,54 @@ static int f_quetta_end_frame(lua_State* L) {
       fwrite(buffer, 1, codepoint_length, stdout);
     }
   }
+  fflush(stdout);
   return 0;
+}
+
+
+static int initialized = -1;
+static int restore = 0;
+struct termios original_term = {0};
+int f_quetta_gc(lua_State* L) {
+  if (isatty(STDIN_FILENO)) {
+    if (!restore)
+      original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
+  }
+  if (initialized) {
+    lua_rawgeti(L, LUA_REGISTRYINDEX, initialized);
+    lua_pcall(L, 0, 0, 0);
+    luaL_unref(L, LUA_REGISTRYINDEX, initialized);
+  }
+  return 0;
+}
+
+static int f_quetta_init(lua_State* L) {
+  struct termios term={0};
+  restore = lua_toboolean(L, 1);
+  luaL_checktype(L, 2, LUA_TFUNCTION);
+  if (isatty(STDIN_FILENO)) {
+    initialized = luaL_ref(L, LUA_REGISTRYINDEX);
+    tcgetattr(STDIN_FILENO, &original_term);
+    tcgetattr(STDIN_FILENO, &term);
+    term.c_lflag &= ~(ECHO | ICANON | ISIG | IXON | IEXTEN);
+    term.c_iflag &= ~(IXON);
+    tcsetattr(STDIN_FILENO, TCSANOW, &term);
+    lua_pushboolean(L, 1);
+  } else
+    lua_pushboolean(L, 0);
+  return 1;
 }
 
 static const luaL_Reg quetta_api[] = {
   { "__gc",        f_quetta_gc          },
+  { "init",        f_quetta_init        },
   { "size",        f_quetta_size        },
   { "read",        f_quetta_read        },
-  { "begin_frame", f_quetta_begin_frame },
   { "end_frame",   f_quetta_end_frame   },
   { "draw_rect",   f_quetta_draw_rect   },
   { "draw_text",   f_quetta_draw_text   },
-  { NULL,      NULL                  }
+  { NULL,      NULL                     }
 };
 
 
@@ -259,16 +273,5 @@ int luaopen_libquetta(lua_State* L) {
   lua_pushvalue(L, -1);
   lua_setmetatable(L, -2);
 
-  struct termios term={0};
-  if (isatty(STDIN_FILENO)) {
-    tcgetattr(STDIN_FILENO, &original_term);
-    tcgetattr(STDIN_FILENO, &term);
-    term.c_lflag &= ~(ECHO | ICANON | ISIG | IXON | IEXTEN);
-    term.c_iflag &= ~(IXON);
-    tcsetattr(STDIN_FILENO, TCSANOW, &term);
-    fprintf(stdout, "\x1B[?25l"); // Disable curosr.
-    fprintf(stdout, "\x1B[?47h"); // Use alternate screen buffer.
-    fflush(stdout);
-  }
   return 1;
 }
