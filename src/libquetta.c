@@ -63,17 +63,12 @@ static int display_resize(s_display* display, int x, int y) {
 
 
 static int f_quetta_size(lua_State* L) {
-  if (strcmp(luaL_checkstring(L, 1), "stdout") == 0) {
-    struct winsize size = {0};
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-    lua_pushinteger(L, size.ws_col);
-    lua_pushinteger(L, size.ws_row);
-    display_resize(&stdout_display, size.ws_col, size.ws_row);
-    display_resize(&buffered_display, size.ws_col, size.ws_row);
-  } else {
-    lua_pushnil(L);
-    lua_pushnil(L);
-  }
+  struct winsize size = {0};
+  ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
+  lua_pushinteger(L, size.ws_col);
+  lua_pushinteger(L, size.ws_row);
+  display_resize(&stdout_display, size.ws_col, size.ws_row);
+  display_resize(&buffered_display, size.ws_col, size.ws_row);
   return 2;
 }
 
