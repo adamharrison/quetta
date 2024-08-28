@@ -135,7 +135,7 @@ function system.poll_event()
     end
   end
   
-  if n:find("^[%w %.!@#$%%%^&%*%(%)'\",:]") then
+  if n:find("^[%w %.!@#$%%%^&%*%(%)'\"\\/,:]") then
     accumulator = ""
     return "textinput", n
   end
@@ -183,7 +183,6 @@ core.step = function()
   local did_redraw = old_step()
   local read = libquetta.read(config.blink_period / 2)
   if read then
-    io.open("/tmp/test", "ab"):write(read):close()
     accumulator = accumulator .. read
     core.redraw = true
   end
@@ -202,18 +201,17 @@ renderer.draw_rect = function(x, y, w, h, color)
   end
 end
 
-renderer.draw_text = function(font, string, x, y, color)
-  string = tostring(string)
+renderer.draw_text = function(font, str, x, y, color)
+  str = tostring(str):gsub("\t", string.rep(" ", style.tab_width))
   if x and y and (not color or not color[4] or color[4] > 0) and (y and y >= clip.y and y < clip.y + clip.h) then
-  if type(string) == 'number' then string = tostring(string) end
     local s = math.max(clip.x - x, 0) + 1
-    local e = math.min(clip.x + clip.w, x + string:ulen()) - x
-    local str = string:usub(s, e)
+    local e = math.min(clip.x + clip.w, x + str:ulen()) - x
+    local trunc = str:usub(s, e)
     if #str > 0 then
-      libquetta.draw_text(font, str, math.floor(x), math.floor(y), translate_color(color))
+      libquetta.draw_text(font, trunc, math.floor(x), math.floor(y), translate_color(color))
     end
   end
-  return x + string:ulen()
+  return x + str:ulen()
 end
 
 style.caret_width = 1
