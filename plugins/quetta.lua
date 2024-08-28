@@ -144,6 +144,7 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
     
     if #accumulator == 2 and accumulator == "\x1B\x7F" then accumulator = "" table.insert(queued_presses, "left alt") table.insert(queued_presses, "backspace") return system.poll_event() end
     if #accumulator == 1 and accumulator == "\x08" then accumulator = "" table.insert(queued_presses, "left ctrl") table.insert(queued_presses, "backspace") return system.poll_event() end
+    if #accumulator == 3 and accumulator == "\x1B[Z" then accumulator = "" table.insert(queued_presses, "left shift") table.insert(queued_presses, "tab") return system.poll_event() end
     if #accumulator == 1 and accumulator == "\x7F" then accumulator = "" return "keypressed", "backspace" end
     if #accumulator == 1 and accumulator == "\x1B" then accumulator = "" return "keypressed", "escape" end
     if #accumulator == 1 and (accumulator == "\n" or accumulator == "\r") then accumulator = "" return "keypressed", "return" end
