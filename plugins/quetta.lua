@@ -22,11 +22,13 @@ config.plugins.quetta = common.merge({
   -- restores the specific terminal configuration you had before this intiialized vs. best guess
   restore = false,
   -- how many lines we should scroll by on mousewheel
-  scroll_speed = 5
+  scroll_speed = 5,
+  -- overrides the term check
+  override_term_check = false
 }, config.plugins.quetta)
 
 
-if os.getenv("TERM"):find("xterm") then
+if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") or os.getenv("TERM"):find("alacritty") then
   io.stdout:write("\x1B7")
   if config.plugins.quetta.disable_cursor then io.stdout:write("\x1B[?25l") end -- Disable cursor.
   if config.plugins.quetta.use_alternate_buffer then io.stdout:write("\x1B[?47h") end -- Use alternate screen buffer.
