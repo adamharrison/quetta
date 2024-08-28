@@ -5,14 +5,14 @@
       "files": [
         {
           "arch": "x86_64-linux",
-          "checksum": "8a38dd46da9a2d23d2ad932166461a51365975eddd4c715a4b0b4b852b7d4bf9",
-          "url": "https://github.com/adamharrison/quetta/releases/download/v0.1/libquetta.x86_64-linux.so"
+          "checksum": "ff8eeaa762f17eb9d64b2a552b01b51546235dae7207bc018ba644cd06a0bda4",
+          "url": "https://github.com/adamharrison/quetta/releases/download/v0.2/libquetta.x86_64-linux.so"
         }
       ],
       "id": "quetta",
       "modversion": "3",
       "path": "plugins/quetta.lua",
-      "version": "0.1"
+      "version": "0.2"
     }
   ]
 }
