@@ -259,7 +259,9 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
     end
   end
   keymap.add {
-    ["ctrl+q"] = "core:quit"
+    ["ctrl+q"] = "core:quit",
+    ["alt+pageup"] = "doc:select-to-previous-page",
+    ["alt+pagedown"] = "doc:select-to-next-page"
   }
 else
   core.error("unable to start quetta; requires an xterm terminal")
