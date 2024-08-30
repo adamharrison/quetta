@@ -88,7 +88,19 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
     ["\x1B%[5;?(%d?)~"] = "pageup",
     ["\x1B%[6;?(%d?)~"] = "pagedown",
     ["\x1B%[1?;?(%d?)H"] = "home",
-    ["\x1B%[1?;?(%d?)F"] = "end",
+    ["\x1B%[1;?(%d?)F"] = "end",
+    ["\x1B%[1;?(%d?)P"] = "f1",
+    ["\x1B%[1;?(%d?)Q"] = "f2",
+    ["\x1B%[1;?(%d?)R"] = "f3",
+    ["\x1B%[1;?(%d?)S"] = "f4",
+    ["\x1B%[15;?(%d?)~"] = "f5",
+    ["\x1B%[16;?(%d?)~"] = "f6",
+    ["\x1B%[17;?(%d?)~"] = "f7",
+    ["\x1B%[18;?(%d?)~"] = "f8",
+    ["\x1B%[19;?(%d?)~"] = "f9",
+    ["\x1B%[20;?(%d?)~"] = "f10",
+    ["\x1B%[21;?(%d?)~"] = "f11",
+    ["\x1B%[22;?(%d?)~"] = "f12"
   }
 
   local queued_presses = {}
@@ -141,7 +153,7 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
         end
       end
     end
-    
+    if accumulator:find("^\x1BO.") then accumulator = "" return "keypressed", "f" .. n:byte(3) - string.byte("O") end
     if #accumulator == 2 and accumulator == "\x1B\x7F" then accumulator = "" table.insert(queued_presses, "left alt") table.insert(queued_presses, "backspace") return system.poll_event() end
     if #accumulator == 1 and accumulator == "\x08" then accumulator = "" table.insert(queued_presses, "left ctrl") table.insert(queued_presses, "backspace") return system.poll_event() end
     if #accumulator == 3 and accumulator == "\x1B[Z" then accumulator = "" table.insert(queued_presses, "left shift") table.insert(queued_presses, "tab") return system.poll_event() end
