@@ -192,7 +192,7 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
       end
     end
     accumulator = ""
-    return "textinput", n
+    return "textinput", n:gsub("%c+", "")
   end
 
   core.step = function()
