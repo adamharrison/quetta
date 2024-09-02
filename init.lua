@@ -20,7 +20,7 @@ config.plugins.quetta = common.merge({
   -- the amount of time that must pass betwene clicks to separate a single click from a double-click
   click_interval = 0.3,
   -- restores the specific terminal configuration you had before this intiialized vs. best guess
-  restore = false,
+  restore = true,
   -- how many lines we should scroll by on mousewheel
   scroll_speed = 5,
   -- overrides the term check
@@ -246,7 +246,7 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
   style.caret_width = 1
   style.tab_width = 20
   style.margin.tab.top = 0
-  style.divider_size = 1
+  style.divider_size = 0
   core.window_mode = "maximized"
   config.transitions = false
   config.tab_close_button = false
