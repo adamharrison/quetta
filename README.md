@@ -1,6 +1,6 @@
 # quetta
 
-![video](quetta.mp4)
+https://github.com/user-attachments/assets/b5aadbc0-599f-4104-8b57-c2fea0dbabe2
 
 Turns lite-xl into a vim-like terminal-based editor.
 
