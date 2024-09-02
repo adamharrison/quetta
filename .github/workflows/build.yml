@@ -51,28 +51,28 @@ jobs:
   #       uses: actions/upload-artifact@v3
   #       with: { name: "Windows", path: "*.dll" }
 
-  # build_macos:
-  #   needs: [version]
-  #   runs-on: macos-11
-  #   env:
-  #     CC: clang
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v3
-  #       with: { fetch-depth: 0, submodules: true }
-  #     - name: Build MacOS
-  #       env: { GITHUB_TOKEN: "${{ github.token }}" }
-  #       run: |
-  #         ./build.sh clean
-  #         BIN=libterminal.x86_64-darwin.so ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-x86_64-darwin'"'
-  #         BIN=libterminal.aarch64-darwin.so CC=clang CFLAGS="-arch arm64" ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-x86_64-darwin'"'
-  #     - name: Upload Artifacts
-  #       uses: actions/upload-artifact@v3
-  #       with: { name: "MacOS", path: "*.so" }
+  build_macos:
+    needs: [version]
+    runs-on: macos-11
+    env:
+      CC: clang
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with: { fetch-depth: 0, submodules: true }
+      - name: Build MacOS
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
+        run: |
+          ./build.sh clean
+          BIN=libquetta.x86_64-darwin.so ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-x86_64-darwin'"'
+          BIN=libquetta.aarch64-darwin.so CC=clang CFLAGS="-arch arm64" ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-x86_64-darwin'"'
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with: { name: "MacOS", path: "*.so" }
 
 
   finalize:
-    needs: [version, build_linux]
+    needs: [version, build_macos, build_linux]
     runs-on: ubuntu-latest
     environment: Release
     steps:
@@ -87,5 +87,5 @@ jobs:
         GITHUB_TOKEN: "${{ github.token }}"
       run: |
         wget https://github.com/lite-xl/lite-xl-plugin-manager/releases/download/latest/lpm.x86_64-linux -O lpm-latest && chmod +x lpm-latest
-        ./lpm-latest gh release Linux/*.so
+        ./lpm-latest gh release Linux/*.so MacOS/*.so
 
