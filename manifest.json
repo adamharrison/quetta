@@ -5,8 +5,8 @@
       "files": [
         {
           "arch": "x86_64-linux",
-          "checksum": "ff8eeaa762f17eb9d64b2a552b01b51546235dae7207bc018ba644cd06a0bda4",
-          "url": "https://github.com/adamharrison/quetta/releases/download/v0.2/libquetta.x86_64-linux.so"
+          "checksum": "1d66d2414e9e2644d46dd499d3bc5d15e7f6d5038ae021bc16002226de3032cc",
+          "url": "https://github.com/adamharrison/quetta/releases/download/v0.3/libquetta.x86_64-linux.so"
         },
         {
           "arch": "aarch64-linux",
@@ -17,7 +17,7 @@
       "id": "quetta",
       "modversion": "3",
       "path": "init.lua",
-      "version": "0.2"
+      "version": "0.3"
     }
   ]
 }
