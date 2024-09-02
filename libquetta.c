@@ -34,15 +34,23 @@
 #endif
 
 typedef struct {
+  int codepoint;
   union {
     struct {
-      int codepoint;
-      unsigned char foreground;
-      unsigned char background;
+      unsigned int foreground;
+      unsigned int background;
     };
-    long long value;
+    unsigned long long color;
   };
 } s_pixel;
+
+typedef enum {
+  COLOR_8BIT,
+  COLOR_24BIT
+} e_color_model;
+
+static e_color_model color_model = COLOR_8BIT;
+
 typedef struct {
   int x, y;
   s_pixel* pixels;
@@ -178,8 +186,9 @@ static int f_quetta_end_frame(lua_State* L) {
   int length = buffered_display.y * buffered_display.x;
   char buffer[5] = {0};
   for (int idx = 0; idx < length; ++idx) {
-    if (buffered_display.pixels[idx].value != stdout_display.pixels[idx].value) {
-      stdout_display.pixels[idx].value = buffered_display.pixels[idx].value;
+    if (buffered_display.pixels[idx].color != stdout_display.pixels[idx].color || buffered_display.pixels[idx].codepoint != stdout_display.pixels[idx].codepoint) {
+      stdout_display.pixels[idx].color = buffered_display.pixels[idx].color;
+      stdout_display.pixels[idx].codepoint = buffered_display.pixels[idx].codepoint;
       if (cursor_position++ != idx) {
         int x = idx % buffered_display.x;
         int y = idx / buffered_display.x;
@@ -188,11 +197,17 @@ static int f_quetta_end_frame(lua_State* L) {
       }
       if (foreground_color != buffered_display.pixels[idx].foreground) {
         foreground_color = buffered_display.pixels[idx].foreground;
-        fprintf(stdout, "\x1B[38;5;%dm", foreground_color);
+        if (color_model == COLOR_24BIT)
+          fprintf(stdout, "\x1B[38;2;%d;%d;%dm", (foreground_color >> 24) & 0xFF, (foreground_color >> 16) & 0xFF, (foreground_color >> 8) & 0xFF);
+        else
+          fprintf(stdout, "\x1B[38;5;%dm", foreground_color);
       }
       if (background_color != buffered_display.pixels[idx].background) {
         background_color = buffered_display.pixels[idx].background;
-        fprintf(stdout, "\x1B[48;5;%dm", background_color);
+        if (color_model == COLOR_24BIT)
+          fprintf(stdout, "\x1B[48;2;%d;%d;%dm", (background_color >> 24) & 0xFF, (background_color >> 16) & 0xFF, (background_color >> 8) & 0xFF);
+        else
+          fprintf(stdout, "\x1B[48;5;%dm", background_color);
       }
       int codepoint_length = codepoint_to_utf8(buffered_display.pixels[idx].codepoint, buffer);
       fwrite(buffer, 1, codepoint_length, stdout);
@@ -223,7 +238,8 @@ int f_quetta_gc(lua_State* L) {
 static int f_quetta_init(lua_State* L) {
   struct termios term={0};
   restore = lua_toboolean(L, 1);
-  luaL_checktype(L, 2, LUA_TFUNCTION);
+  color_model = strcmp(luaL_checkstring(L, 2), "24bit") == 0 ? COLOR_24BIT : COLOR_8BIT;
+  luaL_checktype(L, 3, LUA_TFUNCTION);
   if (isatty(STDIN_FILENO)) {
     initialized = luaL_ref(L, LUA_REGISTRYINDEX);
     tcgetattr(STDIN_FILENO, &original_term);

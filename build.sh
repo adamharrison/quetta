@@ -8,5 +8,5 @@ LDFLAGS=""
 
 [[ "$@" == "clean" ]] && rm -f *.so *.dll && exit 0
 [[ $OSTYPE != 'msys'* && $CC != *'mingw'* ]] && LDFLAGS="$LDFLAGS -lutil"
-$CC $CFLAGS src/*.c $@ -shared -o $BIN
+$CC $CFLAGS *.c $@ -shared -o $BIN
 

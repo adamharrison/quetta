@@ -24,7 +24,8 @@ config.plugins.quetta = common.merge({
   -- how many lines we should scroll by on mousewheel
   scroll_speed = 5,
   -- overrides the term check
-  override_term_check = false
+  override_term_check = false,
+  color_model = os.getenv("COLORTERM") == "truecolor" and "24bit" or "8bit"
 }, config.plugins.quetta)
 
 
@@ -34,7 +35,7 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
   if config.plugins.quetta.use_alternate_buffer then io.stdout:write("\x1B[?47h") end -- Use alternate screen buffer.
   if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003h") end -- Enable mouse tracking.
   io.stdout:flush()
-  libquetta.init(config.plugins.quetta.restore, function()
+  libquetta.init(config.plugins.quetta.restore, config.plugins.quetta.color_model, function()
       io.stdout:write("\x1B[2J");
       if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003l") end
       if config.plugins.quetta.disable_cursor then io.stdout:write("\x1B[?25h") end
@@ -56,6 +57,9 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
   function NagView:get_buttons_height() return 1 end
 
   local function translate_color(color)
+    if config.plugins.quetta.color_model == "24bit" then
+      return tonumber(color[1]) << 24 | tonumber(color[2]) << 16 | tonumber(color[3]) << 8
+    end
     return (math.floor(color[1] * 5 / 256 + 0.5) * 36) + (math.floor((color[2] / 256 * 5 + 0.5)) * 6) + math.floor((color[3] / 256 * 5 + 0.5)) + 16
   end
 
