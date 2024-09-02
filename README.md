@@ -1,15 +1,15 @@
 # quetta
 
+![video](quetta.mp4)
+
 Turns lite-xl into a vim-like terminal-based editor.
 
-## Why god why?
+## Install
 
-Yo dawg.
-
-![image](yodawg.png)
-
-## To run (with mod-version 4)
+Quetta can be installed as a lite-xl plugin, as normal, by downloading the init.lua and shared library comoponents from the 
+[release page](https://github.com/adamharrison/quetta/releases), or, it can be installed via a lite-xl package manager
+like [lpm](https://github.com/lite-xl/lite-xl-plugin-manager).
 
 ```
-clear && BIN=libvim.so ./build.sh && lpm run vim --reinstall --symlink -- ~/lite-xl/src/main.c
+lpm install quetta
 ```
