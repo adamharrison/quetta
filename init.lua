@@ -58,7 +58,7 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
 
   local function translate_color(color)
     if config.plugins.quetta.color_model == "24bit" then
-      return tonumber(color[1]) << 24 | tonumber(color[2]) << 16 | tonumber(color[3]) << 8
+      return (tonumber(color[1]) << 24) | (tonumber(color[2]) << 16) | (tonumber(color[3]) << 8) | math.floor(tonumber(color[4]))
     end
     return (math.floor(color[1] * 5 / 256 + 0.5) * 36) + (math.floor((color[2] / 256 * 5 + 0.5)) * 6) + math.floor((color[3] / 256 * 5 + 0.5)) + 16
   end
@@ -244,6 +244,8 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
   end
 
   style.caret_width = 1
+  style.scrollbar_size = 1
+  style.expanded_scrollbar_size = 1
   style.tab_width = 20
   style.margin.tab.top = 0
   style.divider_size = 0

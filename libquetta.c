@@ -137,6 +137,14 @@ static int f_quetta_draw_text(lua_State* L) {
   return 0;
 }
 
+static int alpha_blend(int srcr, int srcg, int srcb, int dstr, int dstg, int dstb, float alpha) {
+  float ialpha = 1.0f - alpha;
+  return ((int)((srcr * alpha) + (dstr * ialpha)) & 0xFF) << 24 | 
+    ((int)((srcg * alpha) + (dstg * ialpha)) & 0xFF) << 16 |
+    ((int)((srcb * alpha) + (dstb * ialpha)) & 0xFF) << 8 |
+    255;
+}
+
 static int f_quetta_draw_rect(lua_State* L) {
   int x = luaL_checkinteger(L, 1);
   int y = luaL_checkinteger(L, 2);
@@ -144,13 +152,20 @@ static int f_quetta_draw_rect(lua_State* L) {
   int h = luaL_checkinteger(L, 4);
   int color = luaL_checkinteger(L, 5);
   int limit = buffered_display.x * buffered_display.y;
+  int r = ((color >> 24) & 0xFF), g = ((color >> 16) & 0xFF), b = ((color >> 8) & 0xFF), a = (color & 0xFF);
+  float alpha = a / 255.0f;
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       int idx = (y + i) * buffered_display.x + (j + x);
       if (idx >= limit)
         break;
-      buffered_display.pixels[idx].codepoint = ' ';
-      buffered_display.pixels[idx].background = color;
+      if (a == 255) {
+        buffered_display.pixels[idx].codepoint = ' ';
+        buffered_display.pixels[idx].background = color;
+      } else {
+        buffered_display.pixels[idx].foreground = alpha_blend(r, g, b, (buffered_display.pixels[idx].foreground >> 24) & 0xFF, (buffered_display.pixels[idx].foreground >> 16) & 0xFF, (buffered_display.pixels[idx].foreground >> 8) & 0xFF, alpha);
+        buffered_display.pixels[idx].background = alpha_blend(r, g, b, (buffered_display.pixels[idx].background >> 24) & 0xFF, (buffered_display.pixels[idx].background >> 16) & 0xFF, (buffered_display.pixels[idx].background >> 8) & 0xFF, alpha);
+      }
     }
   }
   return 0;
