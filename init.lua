@@ -49,7 +49,6 @@ if config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") 
     io.stdout:flush()
     
     local size_x, size_y = libquetta.size()
-    io.open("wat", "wb"):write(size_x, " ", size_y):close()
     style.padding = { x = 0, y = 0 }
 
     local clip = { x = 1, y = 1, x = size_x, y = size_y }

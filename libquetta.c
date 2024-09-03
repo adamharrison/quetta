@@ -178,7 +178,7 @@ static int f_quetta_draw_rect(lua_State* L) {
       int idx = (y + i) * buffered_display.x + (j + x);
       if (idx >= limit)
         break;
-      if (a == 255) {
+      if (color_model == COLOR_8BIT || a == 255) {
         buffered_display.pixels[idx].codepoint = ' ';
         buffered_display.pixels[idx].background = color;
       } else {
