@@ -7,9 +7,7 @@
   #endif
   #include <windows.h>
 #else
-  #include <unistd.h>
   #include <fcntl.h>
-  #include <math.h>
   #include <sys/ioctl.h>
   #include <sys/types.h>
   #include <sys/stat.h>
@@ -20,6 +18,9 @@
     #include <pty.h>
   #endif
 #endif
+#include <assert.h>
+#include <math.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -71,26 +72,44 @@ static int display_resize(s_display* display, int x, int y) {
 
 
 static int f_quetta_size(lua_State* L) {
-  struct winsize size = {0};
-  ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-  lua_pushinteger(L, size.ws_col);
-  lua_pushinteger(L, size.ws_row);
-  display_resize(&stdout_display, size.ws_col, size.ws_row);
-  display_resize(&buffered_display, size.ws_col, size.ws_row);
+  #ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
+    //lua_pushinteger(L, info.srWindow.Right - info.srWindow.Left + 1);
+    //lua_pushinteger(L, info.srWindow.Bottom - info.srWindow.Top + 1);
+    
+    //lua_pushinteger(L, info.dwMaximumWindowSize.X);
+    //lua_pushinteger(L, info.dwMaximumWindowSize.Y);
+
+    lua_pushinteger(L, info.dwSize.X);
+    lua_pushinteger(L, info.dwSize.Y);
+  #else
+    struct winsize size = {0};
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
+    lua_pushinteger(L, size.ws_col);
+    lua_pushinteger(L, size.ws_row);
+  #endif
+  display_resize(&stdout_display, lua_tointeger(L, -2), lua_tointeger(L, -1));
+  display_resize(&buffered_display, lua_tointeger(L, -2), lua_tointeger(L, -1));
   return 2;
 }
 
 
 static int f_quetta_read(lua_State* L) {
   double timeout = luaL_checknumber(L, 1);
-  fd_set set;
-  struct timeval tv = { .tv_sec = (int)timeout, .tv_usec = fmod(timeout, 1.0) * 100000 };
-  FD_ZERO(&set);
-  FD_SET(STDIN_FILENO, &set);
-  int rv = select(1, &set, NULL, NULL, &tv);
-  if (rv <= 0)
-    return 0;
   char block[1024];
+  #ifdef _WIN32
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), (int)(timeout * 1000)) != WAIT_OBJECT_0)
+      return 0;
+  #else
+    fd_set set;
+    struct timeval tv = { .tv_sec = (int)timeout, .tv_usec = fmod(timeout, 1.0) * 100000 };
+    FD_ZERO(&set);
+    FD_SET(STDIN_FILENO, &set);
+    int rv = select(1, &set, NULL, NULL, &tv);
+    if (rv <= 0)
+      return 0;
+  #endif
   int length = read(STDIN_FILENO, block, sizeof(block));
   if (length >= 0) {
     lua_pushlstring(L, block, length);
@@ -235,14 +254,25 @@ static int f_quetta_end_frame(lua_State* L) {
 
 static int initialized = -1;
 static int restore = 0;
-struct termios original_term = {0};
+
+#ifndef _WIN32
+  struct termios original_term = {0};
+#else
+  DWORD original_mode_in = 0, original_mode_out = 0;
+#endif
+
 int f_quetta_gc(lua_State* L) {
-  if (isatty(STDIN_FILENO)) {
-    if (!restore)
-      original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
-  }
   if (initialized) {
+    #ifndef _WIN32
+      if (!restore)
+        original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
+      tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
+    #else
+      if (restore) {
+        SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), original_mode_in);
+        SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), original_mode_out);
+      }
+    #endif
     lua_rawgeti(L, LUA_REGISTRYINDEX, initialized);
     lua_pcall(L, 0, 0, 0);
     luaL_unref(L, LUA_REGISTRYINDEX, initialized);
@@ -251,21 +281,44 @@ int f_quetta_gc(lua_State* L) {
 }
 
 static int f_quetta_init(lua_State* L) {
-  struct termios term={0};
   restore = lua_toboolean(L, 1);
   color_model = strcmp(luaL_checkstring(L, 2), "24bit") == 0 ? COLOR_24BIT : COLOR_8BIT;
   luaL_checktype(L, 3, LUA_TFUNCTION);
-  if (isatty(STDIN_FILENO)) {
-    initialized = luaL_ref(L, LUA_REGISTRYINDEX);
-    tcgetattr(STDIN_FILENO, &original_term);
-    tcgetattr(STDIN_FILENO, &term);
-    term.c_lflag &= ~(ECHO | ICANON | ISIG | IXON | IEXTEN);
-    term.c_iflag &= ~(IXON);
-    tcsetattr(STDIN_FILENO, TCSANOW, &term);
-    lua_pushboolean(L, 1);
-  } else
-    lua_pushboolean(L, 0);
-  return 1;
+  #ifdef _WIN32  
+    BOOL success = AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole();
+    if (success) {
+      HANDLE hConOut = CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+      SetStdHandle(STD_OUTPUT_HANDLE, hConOut);
+      HANDLE hConIn = CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+      SetStdHandle(STD_INPUT_HANDLE, hConIn);
+      success = GetConsoleMode(hConIn, &original_mode_in) && GetConsoleMode(hConOut, &original_mode_out) &&
+        SetConsoleMode(hConIn, (original_mode_in & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_INSERT_MODE | ENABLE_PROCESSED_INPUT | ENABLE_QUICK_EDIT_MODE)) | ENABLE_VIRTUAL_TERMINAL_INPUT) &&
+        SetConsoleMode(hConOut, ((original_mode_out & ~ENABLE_WRAP_AT_EOL_OUTPUT) | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN));
+    }
+    if (!success) {
+      lua_pushboolean(L, 0);
+      char error_buffer[2048];
+      int last_error_code = GetLastError();
+      FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, last_error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)error_buffer, sizeof(error_buffer), NULL);
+      lua_pushstring(L, error_buffer);
+    } else {
+      initialized = luaL_ref(L, LUA_REGISTRYINDEX);
+      lua_pushboolean(L, 1);
+    }
+  #else
+    if (isatty(STDIN_FILENO)) {
+      initialized = luaL_ref(L, LUA_REGISTRYINDEX);
+      tcgetattr(STDIN_FILENO, &original_term);
+      struct termios term = {0};
+      tcgetattr(STDIN_FILENO, &term);
+      term.c_lflag &= ~(ECHO | ICANON | ISIG | IXON | IEXTEN);
+      term.c_iflag &= ~(IXON);
+      tcsetattr(STDIN_FILENO, TCSANOW, &term);
+      lua_pushboolean(L, 1);
+    } else
+      lua_pushboolean(L, 0);
+  #endif
+  return 2;
 }
 
 static const luaL_Reg quetta_api[] = {
