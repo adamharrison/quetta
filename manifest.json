@@ -5,29 +5,29 @@
       "files": [
         {
           "arch": "x86_64-linux",
-          "checksum": "4afd62000474996882fdcfadf662a9a86f983786c2f1dc21cdf2acdcffe3b332",
-          "url": "https://github.com/adamharrison/quetta/releases/download/v0.5/libquetta.x86_64-linux.so"
+          "checksum": "575ae56a0504fa59dc8850782d3fa270bda353a383806c65a2c68f9e9e2cfdfa",
+          "url": "https://github.com/adamharrison/quetta/releases/download/v0.51/libquetta.x86_64-linux.so"
         },
         {
           "arch": "aarch64-linux",
-          "checksum": "f80d2a68ce585f19a7733ac818fdda7c1b0141290c3907ce6fbaef0dbf1c89a7",
-          "url": "https://github.com/adamharrison/quetta/releases/download/v0.2/libquetta.aarch64-linux.so"
+          "checksum": "f4476cdfaeb124d4d64aab5f8d3361353a510219669494691650adb35a250260",
+          "url": "https://github.com/adamharrison/quetta/releases/download/v0.51/libquetta.aarch64-linux.so"
         },
         {
           "arch": "x86_64-darwin",
-          "checksum": "fbdc7c2bef2e2440d1bb29d615f756ab34203bfcbc70c0c87dc6ffa1cdc3fdd1",
-          "url": "https://github.com/adamharrison/quetta/releases/download/v0.5/libquetta.x86_64-darwin.so"
+          "checksum": "18489f303232d92367813ae396a995f8bc61738a37ef5da7903953cc7b49c63b",
+          "url": "https://github.com/adamharrison/quetta/releases/download/v0.51/libquetta.x86_64-darwin.so"
         },
         {
           "arch": "aarch64-darwin",
-          "checksum": "f80d2a68ce585f19a7733ac818fdda7c1b0141290c3907ce6fbaef0dbf1c89a7",
-          "url": "https://github.com/adamharrison/quetta/releases/download/v0.2/libquetta.aarch64-darwin.so"
+          "checksum": "10704c0fb1ed781d90fe7c8ca1d6292e23752f3dfa5de0f85b47051853365564",
+          "url": "https://github.com/adamharrison/quetta/releases/download/v0.51/libquetta.aarch64-darwin.so"
         }
       ],
       "id": "quetta",
       "modversion": "3",
       "path": "init.lua",
-      "version": "0.5"
+      "version": "0.51"
     }
   ]
 }
