@@ -264,8 +264,10 @@ static int restore = 0;
 int f_quetta_gc(lua_State* L) {
   if (initialized) {
     #ifndef _WIN32
-      if (!restore)
+      if (!restore) {
         original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
+        original_term.c_iflag |= IXON;
+      }
       tcsetattr(STDIN_FILENO, TCSANOW, &original_term);
     #else
       if (restore) {
