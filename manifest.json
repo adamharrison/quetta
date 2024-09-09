@@ -1,7 +1,7 @@
 {
   "addons": [
     {
-      "description": "Turns lite-xl into a terminal based editor.",
+      "description": "Turns Lite XL into a terminal based editor.",
       "files": [
         {
           "arch": "x86_64-linux",
