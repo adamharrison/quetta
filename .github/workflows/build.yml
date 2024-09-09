@@ -53,7 +53,7 @@ jobs:
 
   build_macos:
     needs: [version]
-    runs-on: macos-11
+    runs-on: macos-latest
     env:
       CC: clang
     steps:
