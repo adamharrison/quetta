@@ -75,14 +75,8 @@ static int f_quetta_size(lua_State* L) {
   #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO info;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
-    //lua_pushinteger(L, info.srWindow.Right - info.srWindow.Left + 1);
-    //lua_pushinteger(L, info.srWindow.Bottom - info.srWindow.Top + 1);
-    
-    //lua_pushinteger(L, info.dwMaximumWindowSize.X);
-    //lua_pushinteger(L, info.dwMaximumWindowSize.Y);
-
-    lua_pushinteger(L, info.dwSize.X);
-    lua_pushinteger(L, info.dwSize.Y);
+    lua_pushinteger(L, info.srWindow.Right - info.srWindow.Left + 1);
+    lua_pushinteger(L, info.srWindow.Bottom - info.srWindow.Top + 1);
   #else
     struct winsize size = {0};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
@@ -99,8 +93,26 @@ static int f_quetta_read(lua_State* L) {
   double timeout = luaL_checknumber(L, 1);
   char block[1024];
   #ifdef _WIN32
-    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), (int)(timeout * 1000)) != WAIT_OBJECT_0)
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), (int)(timeout * 1000)) == WAIT_TIMEOUT)
       return 0;
+    INPUT_RECORD irs[1024];
+    DWORD events;
+    if (!PeekConsoleInput(GetStdHandle(STD_INPUT_HANDLE), irs, 1024, &events))
+      return luaL_error(L, "error getting input: %d", GetLastError());
+    int has_relevant_event = 0;
+    for (int i = 0; i < events; ++i) {
+      if (irs[i].EventType == KEY_EVENT)
+        has_relevant_event = 1;
+    }
+    if (!has_relevant_event) {
+      FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+      return 0;
+    }
+    DWORD length;
+    if (!ReadFile(GetStdHandle(STD_INPUT_HANDLE), block, sizeof(block), &length, NULL))
+      return luaL_error(L, "error getting input: %d", GetLastError());
+    lua_pushlstring(L, block, length);
+    return 1;
   #else
     fd_set set;
     struct timeval tv = { .tv_sec = (int)timeout, .tv_usec = fmod(timeout, 1.0) * 100000 };
@@ -109,16 +121,14 @@ static int f_quetta_read(lua_State* L) {
     int rv = select(1, &set, NULL, NULL, &tv);
     if (rv <= 0)
       return 0;
+    int length = read(STDIN_FILENO, block, sizeof(block));
+    if (length >= 0) {
+      lua_pushlstring(L, block, length);
+      return 1;
+    }
+    return luaL_error(L, "error getting input: %s", strerror(errno));
   #endif
-  int length = read(STDIN_FILENO, block, sizeof(block));
-  if (length >= 0) {
-    lua_pushlstring(L, block, length);
-    return 1;
-  }
-  return luaL_error(L, "error getting input: %s", strerror(errno));
 }
-
-
 
 static const char* utf8_to_codepoint(const char *p, unsigned *dst) {
   const unsigned char *up = (unsigned char*)p;
@@ -228,6 +238,11 @@ static int f_quetta_end_frame(lua_State* L) {
         int y = idx / buffered_display.x;
         fprintf(stdout,"\x1B[%d;%dH", y + 1, x + 1);
         cursor_position = idx + 1;
+      } else {
+        #ifdef _WIN32
+          if (idx > 0 && idx % buffered_display.x == 0)
+            fprintf(stdout, "\r\n");
+        #endif
       }
       if (foreground_color != buffered_display.pixels[idx].foreground) {
         foreground_color = buffered_display.pixels[idx].foreground;
@@ -287,11 +302,18 @@ static int f_quetta_init(lua_State* L) {
   color_model = strcmp(luaL_checkstring(L, 2), "24bit") == 0 ? COLOR_24BIT : COLOR_8BIT;
   luaL_checktype(L, 3, LUA_TFUNCTION);
   #ifdef _WIN32  
-    BOOL success = AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole();
+    //BOOL success = AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole();
+    // We can't attach to parent because the size of the buffer we retrieve from the parent in the case of the mingw console isn't accurate.
+    // Seems unrelated to the actual size. I hate windows.
+    BOOL success = AllocConsole();
     if (success) {
-      HANDLE hConOut = CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+      freopen("CONOUT$", "w", stdout);
+      freopen("CONIN$", "r", stdin);
+      HANDLE hConOut = CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+      assert(hConOut && hConOut != INVALID_HANDLE_VALUE);
       SetStdHandle(STD_OUTPUT_HANDLE, hConOut);
-      HANDLE hConIn = CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+      HANDLE hConIn = CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+      assert(hConIn && hConIn != INVALID_HANDLE_VALUE);
       SetStdHandle(STD_INPUT_HANDLE, hConIn);
       success = GetConsoleMode(hConIn, &original_mode_in) && GetConsoleMode(hConOut, &original_mode_out) &&
         SetConsoleMode(hConIn, (original_mode_in & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_INSERT_MODE | ENABLE_PROCESSED_INPUT | ENABLE_QUICK_EDIT_MODE)) | ENABLE_VIRTUAL_TERMINAL_INPUT) &&
