@@ -23,16 +23,13 @@ config.plugins.quetta = common.merge({
   restore = true,
   -- how many lines we should scroll by on mousewheel
   scroll_speed = 5,
-  -- overrides the term check
-  override_term_check = false,
   color_model = os.getenv("COLORTERM") == "truecolor" and "24bit" or "8bit",
   -- checks the exectuable name for this, and only engages if the executing program is this. traditionally "quetta".
   invoke_only_on_executable_name = nil
 }, config.plugins.quetta)
 
-if (not config.plugins.quetta.invoke_only_on_executable_name or ARGS[1]:find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$"))
-  and (config.plugins.quetta.override_term_check or os.getenv("TERM"):find("xterm") or os.getenv("TERM"):find("alacritty")) then
-  local status, err = libquetta.init(config.plugins.quetta.restore, config.plugins.quetta.color_model, function()
+if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(ARGS[1]):find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$")) and os.getenv("TERM") then
+  local status, success_or_err = libquetta.init(config.plugins.quetta.restore, config.plugins.quetta.color_model, function()
       io.stdout:write("\x1B[2J");
       if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003l") end
       if config.plugins.quetta.disable_cursor then io.stdout:write("\x1B[?25h") end
@@ -43,8 +40,8 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or ARGS[1]:find("^"
       io.stdout:flush()
       libquetta.read(0)
   end) 
-  if not status then error(err) end
-  if status then
+  if not status then error(success_or_err) end
+  if success_or_err then
     io.stdout:write("\x1B7")
     if config.plugins.quetta.disable_cursor then io.stdout:write("\x1B[?25l") end -- Disable cursor.
     if config.plugins.quetta.use_alternate_buffer then io.stdout:write("\x1B[?47h") end -- Use alternate screen buffer.
@@ -57,7 +54,10 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or ARGS[1]:find("^"
     local clip = { x = 1, y = 1, x = size_x, y = size_y }
 
     function system.window_has_focus(window) return true end
-    function system.get_window_size(window) return libquetta.size() end
+    function system.get_window_size(window) 
+      local w, h = libquetta.size()
+      return w, h, 0, 0 
+    end
     -- function system.set_window_size(window)   end
     if rawget(_G, "renwindow") then
       function renwindow:get_size() return libquetta.size() end
