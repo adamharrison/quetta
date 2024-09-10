@@ -34,23 +34,21 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with: { name: "Linux", path: "*.so" }
-
-  # build_windows:
-  #   needs: [version]
-  #   permissions: write-all
-  #   runs-on: ubuntu-latest
-  #   defaults: { run: { shell: bash } }
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v3
-  #       with: { fetch-depth: 0, submodules: true }
-  #     - name: Build Windows
-  #       env: { GITHUB_TOKEN: "${{ github.token }}" }
-  #       run: sudo apt-get install mingw-w64 && BIN=libterminal.x86_64-windows.dll CC=x86_64-w64-mingw32-gcc ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-x86_64-windows'"'
-  #     - name: Upload Artifacts
-  #       uses: actions/upload-artifact@v3
-  #       with: { name: "Windows", path: "*.dll" }
-
+  build_windows:
+    needs: [version]
+    permissions: write-all
+    runs-on: ubuntu-latest
+    defaults: { run: { shell: bash } }
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with: { fetch-depth: 0, submodules: true }
+      - name: Build Windows
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
+        run: sudo apt-get install mingw-w64 && BIN=libquetta.x86_64-windows.dll CC=x86_64-w64-mingw32-gcc ./build.sh -O3 -DLIBQUETTA_VERSION='"'${{ needs.version.outputs.version }}-x86_64-windows'"'
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with: { name: "Windows", path: "*.dll" }
   build_macos:
     needs: [version]
     runs-on: macos-latest
@@ -72,7 +70,7 @@ jobs:
 
 
   finalize:
-    needs: [version, build_macos, build_linux]
+    needs: [version, build_macos, build_windows, build_linux]
     runs-on: ubuntu-latest
     environment: Release
     steps:

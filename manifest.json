@@ -22,6 +22,11 @@
           "arch": "aarch64-darwin",
           "checksum": "10704c0fb1ed781d90fe7c8ca1d6292e23752f3dfa5de0f85b47051853365564",
           "url": "https://github.com/adamharrison/quetta/releases/download/v0.51/libquetta.aarch64-darwin.so"
+        },
+        {
+          "arch": "x86_64-windows",
+          "checksum": "10704c0fb1ed781d90fe7c8ca1d6292e23752f3dfa5de0f85b47051853365564",
+          "url": "https://github.com/adamharrison/quetta/releases/download/v0.51/libquetta.x86_64-windows.dll"
         }
       ],
       "id": "quetta",
