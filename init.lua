@@ -8,7 +8,6 @@ local keymap = require "core.keymap"
 local NagView = require "core.nagview"
 local DocView = require "core.docview"
 
-local libquetta = require "plugins.quetta.libquetta"
 
 config.plugins.quetta = common.merge({
   -- allow for tracking of mouseclicks
@@ -29,6 +28,7 @@ config.plugins.quetta = common.merge({
 }, config.plugins.quetta)
 
 if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(ARGS[1]):find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$")) and os.getenv("TERM") then
+  local libquetta = require "plugins.quetta.libquetta"
   local status, success_or_err = libquetta.init(config.plugins.quetta.restore, config.plugins.quetta.color_model, function()
       io.stdout:write("\x1B[2J");
       if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003l") end
@@ -47,11 +47,6 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     if config.plugins.quetta.use_alternate_buffer then io.stdout:write("\x1B[?47h") end -- Use alternate screen buffer.
     if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003h") end -- Enable mouse tracking.
     io.stdout:flush()
-    
-    local size_x, size_y = libquetta.size()
-    style.padding = { x = 0, y = 0 }
-
-    local clip = { x = 1, y = 1, x = size_x, y = size_y }
 
     function system.window_has_focus(window) return true end
     function system.get_window_size(window) 
@@ -76,7 +71,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     renderer.font.get_width = function(font, text) if type(text) ~= 'string' then return #tostring(text) end return text:ulen() end
     renderer.font.get_height = function() return 1 end
 
-    local size_x, size_y
+    local size_x, size_y = libquetta.size()
     local old_size_x, old_size_y
     renderer.begin_frame = function(...)
       size_x, size_y = libquetta.size()
@@ -219,8 +214,10 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       return true
     end
 
+    local clip = { x = 1, y = 1, w = size_x, h = size_y }
     renderer.set_clip_rect = function(x, y, w, h) clip = { x = math.floor(x), y = math.floor(y), w = math.floor(w), h = math.floor(h) } end
 
+    print("CLIP", size_x)
     renderer.draw_rect = function(x, y, w, h, color)
       local sx = math.floor(math.max(x, clip.x))
       local sy = math.floor(math.max(y, clip.y))
@@ -253,6 +250,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       return x + str:ulen()
     end
 
+    style.padding = { x = 0, y = 0 }
     style.caret_width = 1
     style.scrollbar_size = 1
     style.expanded_scrollbar_size = 1
@@ -285,5 +283,5 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     }
   end
 else
-  core.error("unable to start quetta; requires an xterm terminal")
+  core.log_quiet("not starting quetta, either not named correctly or no $TERM variable")
 end
