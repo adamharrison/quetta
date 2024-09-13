@@ -265,6 +265,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.treeview.visible = false
     config.plugins.treeview = false
     config.plugins.minimap = false
+    config.plugins.debugger.drawer_size = 20
 
     -- rebind anything that's not already bound from shift to alt, because terminal emulators tend to dominate the shift-space.
     for k,v in pairs(keymap.map) do
