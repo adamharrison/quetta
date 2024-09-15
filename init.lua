@@ -62,6 +62,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     function NagView:get_buttons_height() return 1 end
 
     local function translate_color(color)
+      if not color then return 0 end
       if config.plugins.quetta.color_model == "24bit" then
         return (tonumber(color[1]) << 24) | (tonumber(color[2]) << 16) | (tonumber(color[3]) << 8) | math.floor(tonumber(color[4]))
       end
@@ -262,10 +263,13 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     core.window_mode = "maximized"
     config.transitions = false
     config.tab_close_button = false
+    -- Specific plugin configs for quetta that allow them to actually work with quetta.
     config.plugins.treeview.visible = false
     config.plugins.treeview = false
     config.plugins.minimap = false
     config.plugins.debugger.drawer_size = 20
+    config.plugins.tetris.cell_padding = 0 
+    config.plugins.tetris.cell_size = 1
 
     -- rebind anything that's not already bound from shift to alt, because terminal emulators tend to dominate the shift-space.
     for k,v in pairs(keymap.map) do
