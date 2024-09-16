@@ -1,4 +1,4 @@
--- mod-version:3 priority:0
+-- mod-version:4 priority:0
 
 local core = require "core"
 local config = require "core.config"
@@ -56,6 +56,12 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     -- function system.set_window_size(window)   end
     if rawget(_G, "renwindow") then
       function renwindow:get_size() return libquetta.size() end
+      function renwindow.create() return setmetatable({}, renwindow) end
+      function renwindow.__restore() return setmetatable({}, renwindow) end
+      function system.set_window_title(window, title) return io.stdout:write("\x1B]0;" .. title .. "\x07") end
+      function system.set_window_mode(window) return 0 end
+      function system.get_window_mode(window) return 0 end
+      function system.set_window_size(window) end
     else
       function renderer:get_size() return libquetta.size() end
     end
@@ -69,6 +75,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       return (math.floor(color[1] * 5 / 256 + 0.5) * 36) + (math.floor((color[2] / 256 * 5 + 0.5)) * 6) + math.floor((color[3] / 256 * 5 + 0.5)) + 16
     end
 
+    renderer.font.load = function(path) return {} end
     renderer.font.get_width = function(font, text) if type(text) ~= 'string' then return #tostring(text) end return text:ulen() end
     renderer.font.get_height = function() return 1 end
 
@@ -218,7 +225,6 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     local clip = { x = 1, y = 1, w = size_x, h = size_y }
     renderer.set_clip_rect = function(x, y, w, h) clip = { x = math.floor(x), y = math.floor(y), w = math.floor(w), h = math.floor(h) } end
 
-    print("CLIP", size_x)
     renderer.draw_rect = function(x, y, w, h, color)
       local sx = math.floor(math.max(x, clip.x))
       local sy = math.floor(math.max(y, clip.y))
@@ -272,13 +278,17 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.tetris.cell_size = 1
 
     -- rebind anything that's not already bound from shift to alt, because terminal emulators tend to dominate the shift-space.
+    -- do this in two steps because if you remove things from the table while iterating it's unstable.
+    local keys = {}
     for k,v in pairs(keymap.map) do
       if k:find("ctrl%+shift") then
-        local list = { table.unpack(v) }
-        for i,cmd in ipairs(list) do
-          keymap.unbind(k, cmd)
-          keymap.add({ [k:gsub("shift", "alt")] = cmd })
-        end
+        table.insert(keys, k)
+      end
+    end
+    for _, k in pairs(keys) do
+      for i,cmd in ipairs({ table.unpack(keymap.map[k]) }) do
+        keymap.unbind(k, cmd)
+        keymap.add({ [k:gsub("shift", "alt")] = cmd })
       end
     end
     keymap.add {
