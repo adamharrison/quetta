@@ -75,7 +75,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       return (math.floor(color[1] * 5 / 256 + 0.5) * 36) + (math.floor((color[2] / 256 * 5 + 0.5)) * 6) + math.floor((color[3] / 256 * 5 + 0.5)) + 16
     end
 
-    renderer.font.load = function(path) return {} end
+    renderer.font.load = function(path) return setmetatable({}, renderer.font) end
     renderer.font.get_width = function(font, text) if type(text) ~= 'string' then return #tostring(text) end return text:ulen() end
     renderer.font.get_height = function() return 1 end
 
@@ -269,9 +269,10 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     core.window_mode = "maximized"
     config.transitions = false
     config.tab_close_button = false
+    
     -- Specific plugin configs for quetta that allow them to actually work with quetta.
     config.plugins.treeview.visible = false
-    config.plugins.treeview = false
+    --config.plugins.treeview = false
     config.plugins.minimap = false
     config.plugins.debugger.drawer_size = 20
     config.plugins.tetris.cell_padding = 0 
