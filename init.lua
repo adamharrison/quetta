@@ -70,7 +70,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     local function translate_color(color)
       if not color then return 0 end
       if config.plugins.quetta.color_model == "24bit" then
-        return (tonumber(color[1]) << 24) | (tonumber(color[2]) << 16) | (tonumber(color[3]) << 8) | math.floor(tonumber(color[4]))
+        return (math.floor(tonumber(color[1])) << 24) | (math.floor(tonumber(color[2])) << 16) | (math.floor(tonumber(color[3])) << 8) | math.floor(tonumber(color[4]))
       end
       return (math.floor(color[1] * 5 / 256 + 0.5) * 36) + (math.floor((color[2] / 256 * 5 + 0.5)) * 6) + math.floor((color[3] / 256 * 5 + 0.5)) + 16
     end
@@ -227,10 +227,16 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     renderer.draw_rect = function(x, y, w, h, color)
       local sx = math.floor(math.max(x, clip.x))
       local sy = math.floor(math.max(y, clip.y))
-      local sw = math.floor(math.min(x + w, clip.x + clip.w)) - sx
       local sh = math.floor(math.min(y + h, clip.y + clip.h)) - sy
-      if sw > 0 and sh > 0 and (not color or not color[4] or color[4] > 0) then
-        libquetta.draw_rect(sx, sy, sw, sh, translate_color(color))
+      if w >= 1 then
+        local sw = math.floor(math.min(x + w, clip.x + clip.w)) - sx
+        if sw > 0 and sh > 0 and (not color or not color[4] or color[4] > 0) then
+          libquetta.draw_rect(sx, sy, sw, sh, translate_color(color))
+        end
+      elseif w > 0 then
+        for i = 0, sh do
+          libquetta.draw_text(style.code_font, "│", sx, sy + i, translate_color(color))
+        end
       end
     end
 
@@ -278,6 +284,11 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.debugger.drawer_size = 20
     config.plugins.tetris.cell_padding = 0 
     config.plugins.tetris.cell_size = 1
+    config.plugins.lineguide.width = 0.1
+    local has_indentguide, indentguide = pcall(require, 'plugins.indentguide')
+    if has_indentguide then function indentguide.get_width() return 0.1 end end
+    config.plugins.scale = false
+    SCALE = 1.0
 
     -- rebind anything that's not already bound from shift to alt, because terminal emulators tend to dominate the shift-space.
     -- do this in two steps because if you remove things from the table while iterating it's unstable.

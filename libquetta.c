@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 
 #ifdef LIBQUETTA_STANDALONE
   #include <lua.h>
@@ -160,8 +161,10 @@ static int f_quetta_draw_text(lua_State* L) {
 
   for (int idx = buffered_display.x * y + x; text < end && idx < limit; ++idx) {
     text = utf8_to_codepoint(text, &codepoint);
-    buffered_display.pixels[idx].foreground = color;
-    buffered_display.pixels[idx].codepoint = codepoint;
+    if (!isspace(codepoint)) {
+      buffered_display.pixels[idx].foreground = color;
+      buffered_display.pixels[idx].codepoint = codepoint;
+    }
   };
   return 0;
 }
