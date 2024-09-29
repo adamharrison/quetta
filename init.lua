@@ -76,7 +76,6 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     end
 
     renderer.font.load = function(path) return setmetatable({}, renderer.font) end
-    renderer.font.get_width = function(font, text) if type(text) ~= 'string' then return #tostring(text) end return text:ulen() end
     renderer.font.get_height = function() return 1 end
 
     local size_x, size_y = libquetta.size()
@@ -244,6 +243,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       indent = 4
     end
     
+    renderer.font.get_width = function(font, text) if type(text) ~= 'string' then return #tostring(text) end return text:gsub("\t", string.rep(" ", indent)):ulen() end
     renderer.draw_text = function(font, str, x, y, color)
       str = tostring(str):gsub("\t", string.rep(" ", indent))
       if x and y and (not color or not color[4] or color[4] > 0) and (y and y >= clip.y and y < clip.y + clip.h) then
@@ -274,6 +274,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.treeview.visible = false
     --config.plugins.treeview = false
     config.plugins.minimap = false
+    config.plugins.build.drawer_size = 20
     config.plugins.debugger.drawer_size = 20
     config.plugins.tetris.cell_padding = 0 
     config.plugins.tetris.cell_size = 1
