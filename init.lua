@@ -7,6 +7,7 @@ local common = require "core.common"
 local keymap = require "core.keymap"
 local NagView = require "core.nagview"
 local DocView = require "core.docview"
+local EmptyView = require "core.emptyview"
 
 
 config.plugins.quetta = common.merge({
@@ -24,7 +25,13 @@ config.plugins.quetta = common.merge({
   scroll_speed = 5,
   color_model = os.getenv("COLORTERM") == "truecolor" and "24bit" or "8bit",
   -- checks the exectuable name for this, and only engages if the executing program is this. traditionally "quetta".
-  invoke_only_on_executable_name = nil
+  invoke_only_on_executable_name = nil,
+  -- if this is true, doesn't block the creation of a window
+  -- we do this, because we require a window with SDL2 to work with the clipboard.
+  -- this may or may not be fixed in SDL3. You can choose whether to enable this or
+  -- not; if you do, then you'll get a clipboard, but you'll use extra resources
+  -- and it'll be a slower startup.
+  create_invisible_window = true
 }, config.plugins.quetta)
 
 if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(ARGS[1]):find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$")) and os.getenv("TERM") then
@@ -53,11 +60,16 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       local w, h = libquetta.size()
       return w, h, 0, 0 
     end
-    -- function system.set_window_size(window)   end
+    
     if rawget(_G, "renwindow") then
       function renwindow:get_size() return libquetta.size() end
-      function renwindow.create() return setmetatable({}, renwindow) end
-      function renwindow.__restore() return setmetatable({}, renwindow) end
+      if config.plugins.quetta.create_invisible_window then
+        local old_create = renwindow.create
+        function renwindow.create() return old_create(0, 0, 1, 1) end
+      else
+        function renwindow.create() return setmetatable({}, renwindow) end
+        function renwindow.__restore() return setmetatable({}, renwindow) end
+      end
       function system.set_window_title(window, title) return io.stdout:write("\x1B]0;" .. title .. "\x07") end
       function system.set_window_mode(window) return 0 end
       function system.get_window_mode(window) return 0 end
@@ -233,21 +245,23 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
         if sw > 0 and sh > 0 and (not color or not color[4] or color[4] > 0) then
           libquetta.draw_rect(sx, sy, sw, sh, translate_color(color))
         end
-      elseif w > 0 then
-        for i = 0, sh do
+      elseif w > 0 and (not color[4] or color[4] > 0) then
+        for i = 0, sh - 1 do
           libquetta.draw_text(style.code_font, "│", sx, sy + i, translate_color(color))
         end
       end
     end
 
-    local old_draw = DocView.draw
     local indent = 4
-    function DocView:draw()
-      local _, indent_size = self.doc:get_indent_info()
-      indent = indent_size
-      old_draw(self)
-      indent = 4
-    end
+    core.add_thread(function() 
+      local old_draw = DocView.draw
+      function DocView:draw()
+        local _, indent_size = self.doc:get_indent_info()
+        indent = indent_size
+        old_draw(self)
+        indent = 4
+      end
+    end)
     
     renderer.font.get_width = function(font, text) if type(text) ~= 'string' then return #tostring(text) end return text:gsub("\t", string.rep(" ", indent)):ulen() end
     renderer.draw_text = function(font, str, x, y, color)
@@ -289,6 +303,47 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     if has_indentguide then function indentguide.get_width() return 0.1 end end
     config.plugins.scale = false
     SCALE = 1.0
+
+    
+    -- Custom EmptyView
+    local function draw_text(x, y, color)
+      local lines = {
+        { fmt = "%s to run a command", cmd = "core:find-command" },
+        { fmt = "%s to open a file from the project", cmd = "core:find-file" },
+        { fmt = "%s to change project folder", cmd = "core:change-project-folder" },
+        { fmt = "%s to open a project folder", cmd = "core:open-project-folder" },
+      }
+      local h = style.big_font:get_height() * #lines
+      local xv = x
+      local title = "Quetta"
+      local version = "version " .. VERSION
+      local title_width = style.big_font:get_width(title)
+      local version_width = style.font:get_width(version)
+      if version_width > title_width then
+        version = VERSION
+        version_width = style.font:get_width(version)
+        xv = x - (version_width - title_width)
+      end
+      local y1 = y + (#lines - 2) / 2
+      x = renderer.draw_text(style.big_font, title, x, y1, color)
+      renderer.draw_text(style.font, version, xv, y1 + 1, color)
+      renderer.draw_rect(x, y, 0.1, h, color)
+      local w = 0
+      for _, line in ipairs(lines) do
+        local text = string.format(line.fmt, keymap.get_binding(line.cmd))
+        w = math.max(w, renderer.draw_text(style.font, text, x + 1, y, color))
+        y = y + 1
+      end
+      return w, h
+    end
+    
+    function EmptyView:draw()
+      self:draw_background(style.background)
+      local w, h = draw_text(0, 0, { 0, 0, 0, 0 })
+      local x = self.position.x + math.max(style.padding.x, (self.size.x - w) / 2)
+      local y = self.position.y + (self.size.y - h) / 2
+      draw_text(x, y, style.dim)
+    end
 
     -- rebind anything that's not already bound from shift to alt, because terminal emulators tend to dominate the shift-space.
     -- do this in two steps because if you remove things from the table while iterating it's unstable.
