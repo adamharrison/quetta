@@ -301,7 +301,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.lineguide.width = 0.1
     local has_indentguide, indentguide = pcall(require, 'plugins.indentguide')
     if has_indentguide then function indentguide.get_width() return 0.1 end end
-    config.plugins.scale = false
+    -- config.plugins.scale = false
     SCALE = 1.0
 
     
