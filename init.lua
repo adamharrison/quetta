@@ -15,7 +15,7 @@ config.plugins.quetta = common.merge({
   mouse_tracking = true,
   -- swaps to the xterm alternate buffer on startup
   use_alternate_buffer = true,
-  -- removes the cursor from being shown
+  -- removes the console cursor from being shown
   disable_cursor = true,
   -- the amount of time that must pass betwene clicks to separate a single click from a double-click
   click_interval = 0.3,
@@ -140,9 +140,10 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     local total_clicks = 0
     local last_click = nil
     function system.poll_event()
-      if #queued_presses > 0 then table.insert(queued_releases, queued_presses[1]) return "keypressed", table.remove(queued_presses, 1) end
+      local window_id = core.windows[1].id	
+      if #queued_presses > 0 then table.insert(queued_releases, queued_presses[1]) return "keypressed", window_id, table.remove(queued_presses, 1) end
       if #queued_events > 0 then return table.unpack(table.remove(queued_events, 1)) end
-      if #queued_releases > 0 then return "keyreleased", table.remove(queued_releases, 1) end
+      if #queued_releases > 0 then return "keyreleased", window_id, table.remove(queued_releases, 1) end
       if #accumulator == 0 then return old_poll() end  
       local n = accumulator
 
@@ -155,16 +156,16 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
           x,y = x:byte() - 33, y:byte() - 33
           local button_id = modifier & 0x3
           if (modifier & 0x40) > 0 then
-            return "mousewheel", (button_id == 0 and 1 or -1) * (1 / size_y) * config.plugins.quetta.scroll_speed, 0
+            return "mousewheel", window_id, (button_id == 0 and 1 or -1) * (1 / size_y) * config.plugins.quetta.scroll_speed, 0
           elseif (modifier & 0x20) > 0 then
             if not last_cursor then last_cursor = { x, y } end
-            return "mousemoved", x, y, x - last_cursor[1], y - last_cursor[2]
+            return "mousemoved", window_id, x, y, x - last_cursor[1], y - last_cursor[2]
           else 
             last_cursor = { x, y }
             if button_id == 3 then
               local name = button_names[pressed_button]
               pressed_button = nil
-              return "mousereleased", name, x, y
+              return "mousereleased", window_id, name, x, y
             else 
               if (modifier & 0x4) > 0 then table.insert(queued_presses, "left shift") end
               if (modifier & 0x8) > 0 then table.insert(queued_presses, "left windows") end
@@ -175,20 +176,22 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
               end
               total_clicks = total_clicks + 1
               pressed_button = button_id
-              table.insert(queued_events, { "mousepressed", button_names[button_id], x, y, total_clicks })
+              table.insert(queued_events, { "mousepressed", window_id, button_names[button_id], x, y, total_clicks })
               return system.poll_event()
             end
           end
+          -- warning; this is a mouse event we don't handle. we should look into this.
+          return system.poll_event()
         end
       end
-      if accumulator:find("^\x1BO.") then accumulator = "" return "keypressed", "f" .. n:byte(3) - string.byte("O") end
+      if accumulator:find("^\x1BO.") then accumulator = "" return "keypressed", window_id, "f" .. n:byte(3) - string.byte("O") end
       if #accumulator == 2 and accumulator == "\x1B\x7F" then accumulator = "" table.insert(queued_presses, "left alt") table.insert(queued_presses, "backspace") return system.poll_event() end
       if #accumulator == 1 and accumulator == "\x08" then accumulator = "" table.insert(queued_presses, "left ctrl") table.insert(queued_presses, "backspace") return system.poll_event() end
       if #accumulator == 3 and accumulator == "\x1B[Z" then accumulator = "" table.insert(queued_presses, "left shift") table.insert(queued_presses, "tab") return system.poll_event() end
-      if #accumulator == 1 and accumulator == "\x7F" then accumulator = "" return "keypressed", "backspace" end
-      if #accumulator == 1 and accumulator == "\x1B" then accumulator = "" return "keypressed", "escape" end
-      if #accumulator == 1 and (accumulator == "\n" or accumulator == "\r") then accumulator = "" return "keypressed", "return" end
-      if #accumulator == 1 and accumulator == "\t" then accumulator = "" return "keypressed", "tab" end
+      if #accumulator == 1 and accumulator == "\x7F" then accumulator = "" return "keypressed", window_id, "backspace" end
+      if #accumulator == 1 and accumulator == "\x1B" then accumulator = "" return "keypressed", window_id, "escape" end
+      if #accumulator == 1 and (accumulator == "\n" or accumulator == "\r") then accumulator = "" return "keypressed", window_id, "return" end
+      if #accumulator == 1 and accumulator == "\t" then accumulator = "" return "keypressed", window_id, "tab" end
       if accumulator:find("^\x1B[\x01-\x1F]") then
         table.insert(queued_presses, "left ctrl")
         table.insert(queued_presses, "left alt")
@@ -219,9 +222,18 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
           end
         end
       end
-      accumulator = ""
-      return "textinput", n:gsub("%c+", "")
+
+      local s = n:find("%c")
+      if s then
+        n = n:sub(1, s - 1)
+        accumulator = n:sub(s)
+      else
+        accumulator = ""
+      end
+      return "textinput", window_id, n:gsub("%c+", "")
     end
+
+    function renwindow:has_focus() return true end
 
     core.step = function()
       local did_redraw = old_step()
