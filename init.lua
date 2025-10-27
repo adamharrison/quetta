@@ -31,7 +31,7 @@ config.plugins.quetta = common.merge({
   -- this may or may not be fixed in SDL3. You can choose whether to enable this or
   -- not; if you do, then you'll get a clipboard, but you'll use extra resources
   -- and it'll be a slower startup.
-  create_invisible_window = true
+  create_invisible_window = not os.getenv("QUETTA_NO_WINDOW")
 }, config.plugins.quetta)
 
 if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(ARGS[1]):find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$")) and os.getenv("TERM") then
@@ -62,14 +62,31 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     end
     
     if rawget(_G, "renwindow") then
+      function renwindow:get_id() return 0 end
       function renwindow:get_size() return libquetta.size() end
-      if config.plugins.quetta.create_invisible_window then
-        local old_create = renwindow.create
-        function renwindow.create() return old_create(0, 0, 1, 1) end
-      else
-        function renwindow.create() return setmetatable({}, renwindow) end
-        function renwindow.__restore() return setmetatable({}, renwindow) end
+      local old_create = renwindow.create
+      function renwindow.create() 
+        if config.plugins.quetta.create_invisible_window then
+          local status, err = pcall(old_create, 0, 0, 1, 1) 
+          if status then return err end
+	end
+	return setmetatable({}, renwindow)
       end
+      local old_restore = renwindow.__restore
+      function renwindow.__restore()
+        if config.plugins.quetta.create_invisible_window then
+          local status, err = pcall(old_restore)
+          if status then return err end
+	end
+	return setmetatable({}, renwindow)
+      end
+      function renwindow:set_mode() end
+      function renwindow:get_mode() return "fullscreen" end
+      function renwindow:set_size() end
+      function renwindow:set_bordered() end
+      function renwindow:set_title() end
+      function system.text_input() end
+      function system.set_window_hit_test() end
       function system.set_window_title(window, title) return io.stdout:write("\x1B]0;" .. title .. "\x07") end
       function system.set_window_mode(window) return 0 end
       function system.get_window_mode(window) return 0 end
@@ -313,7 +330,8 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.lineguide.width = 0.1
     local has_indentguide, indentguide = pcall(require, 'plugins.indentguide')
     if has_indentguide then function indentguide.get_width() return 0.1 end end
-    -- config.plugins.scale = false
+    config.plugins.scale = false
+    config.plugins.scalestatus = false
     SCALE = 1.0
 
     
