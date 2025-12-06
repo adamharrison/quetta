@@ -1,4 +1,4 @@
--- mod-version:4 priority:0
+-- mod-version:4 priority:-4
 
 local core = require "core"
 local config = require "core.config"
@@ -69,19 +69,19 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
         if config.plugins.quetta.create_invisible_window then
           local status, err = pcall(old_create, 0, 0, 1, 1) 
           if status then return err end
-	end
-	return setmetatable({}, renwindow)
+        end
+        return setmetatable({}, renwindow)
       end
       local old_restore = renwindow.__restore
       function renwindow.__restore()
         if config.plugins.quetta.create_invisible_window then
           local status, err = pcall(old_restore)
           if status then return err end
-	end
-	return setmetatable({}, renwindow)
+        end
+        return setmetatable({}, renwindow)
       end
       function renwindow:set_mode() end
-      function renwindow:get_mode() return "fullscreen" end
+      function renwindow:get_mode() return "maximized" end
       function renwindow:set_size() end
       function renwindow:set_bordered() end
       function renwindow:set_title() end
