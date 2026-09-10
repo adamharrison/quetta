@@ -173,7 +173,11 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
           x,y = x:byte() - 33, y:byte() - 33
           local button_id = modifier & 0x3
           if (modifier & 0x40) > 0 then
-            return "mousewheel", window_id, (button_id == 0 and 1 or -1) * (1 / size_y) * config.plugins.quetta.scroll_speed, 0
+            if (modifier & 0x4) > 0 then table.insert(queued_presses, "left shift") end
+            if (modifier & 0x8) > 0 then table.insert(queued_presses, "left windows") end
+            if (modifier & 0x10) > 0 then table.insert(queued_presses, "left ctrl") end
+            table.insert(queued_events, { "mousewheel", window_id, (button_id == 0 and 1 or -1) * (1 / size_y) * config.plugins.quetta.scroll_speed, 0 })
+            return system.poll_event()
           elseif (modifier & 0x20) > 0 then
             if not last_cursor then last_cursor = { x, y } end
             return "mousemoved", window_id, x, y, x - last_cursor[1], y - last_cursor[2]
@@ -257,6 +261,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       local read = libquetta.read(config.blink_period / 2)
       if read then
         accumulator = accumulator .. read
+        io.open("/tmp/read", "ab"):write(read):close()
         core.redraw = true
       end
       return true
