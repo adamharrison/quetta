@@ -295,12 +295,14 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     renderer.font.get_width = function(font, text) if type(text) ~= 'string' then return #tostring(text) end return text:gsub("\t", string.rep(" ", indent)):ulen() end
     renderer.draw_text = function(font, str, x, y, color)
       str = tostring(str):gsub("\t", string.rep(" ", indent))
+      x = math.floor(x)
+      y = math.floor(y)
       if x and y and (not color or not color[4] or color[4] > 0) and (y and y >= clip.y and y < clip.y + clip.h) then
-        local s = math.floor(math.max(clip.x - x, 0) + 1)
-        local e = math.floor(math.min(clip.x + clip.w, x + str:ulen()) - x)
+        local s = math.max(clip.x - x, 0) + 1
+        local e = math.min(clip.x + clip.w, x + str:ulen()) - x
         local trunc = str:usub(s, e)
         if #str > 0 then
-          libquetta.draw_text(font, trunc, math.floor(x), math.floor(y), translate_color(color))
+          libquetta.draw_text(font, trunc, math.max(x, clip.x), math.max(y, clip.y), translate_color(color))
         end
       end
       return x + str:ulen()
@@ -310,6 +312,8 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     style.caret_width = 1
     style.scrollbar_size = 1
     style.expanded_scrollbar_size = 1
+    style.expanded_scrollbar_margin = 0
+    style.contracted_scrollbar_margin = 0
     style.tab_width = 20
     if style.margin then
       style.margin.tab.top = 0
@@ -318,6 +322,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     core.window_mode = "maximized"
     config.transitions = false
     config.tab_close_button = false
+    config.line_height = 1
     
     -- Specific plugin configs for quetta that allow them to actually work with quetta.
     config.plugins.treeview.visible = false
