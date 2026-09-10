@@ -261,7 +261,6 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       local read = libquetta.read(config.blink_period / 2)
       if read then
         accumulator = accumulator .. read
-        io.open("/tmp/read", "ab"):write(read):close()
         core.redraw = true
       end
       return true
@@ -387,9 +386,10 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
 
     -- rebind anything that's not already bound from shift to alt, because terminal emulators tend to dominate the shift-space.
     -- do this in two steps because if you remove things from the table while iterating it's unstable.
+    -- also, keep in cntrl+shift for the arrow keys as those ONLY work with shift and not alt, and are used by the window manager
     local keys = {}
     for k,v in pairs(keymap.map) do
-      if k:find("ctrl%+shift") then
+      if k:find("ctrl%+shift") and not k:find("ctrl%+shift%+down") and not k:find("ctrl%+shift%+up") and not k:find("ctrl%+shift%+left") and not k:find("ctrl%+shift%+right") then
         table.insert(keys, k)
       end
     end
