@@ -36,6 +36,7 @@ config.plugins.quetta = common.merge({
 
 if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(ARGS[1]):find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$")) and os.getenv("TERM") then
   local libquetta = require "plugins.quetta.libquetta"
+  global({ QUETTA = true })
   local status, success_or_err = libquetta.init(config.plugins.quetta.restore, config.plugins.quetta.color_model, function()
       io.stdout:write("\x1B[2J");
       if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003l") end
@@ -153,7 +154,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     local queued_events = {}
     local pressed_button = nil
     local last_cursor = nil
-    local button_names = { [0] = "left", [1] = "right", [2] = "middle" }
+    local button_names = { [0] = "left", [1] = "middle", [2] = "right" }
     local total_clicks = 0
     local last_click = nil
     function system.poll_event()
@@ -303,16 +304,18 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       y = math.floor(y)
       if x and y and (not color or not color[4] or color[4] > 0) and (y and y >= clip.y and y < clip.y + clip.h) then
         local s = math.max(clip.x - x, 0) + 1
-        local e = math.min(clip.x + clip.w, x + str:ulen()) - x
-        local trunc = str:usub(s, e)
-        if #str > 0 then
-          libquetta.draw_text(font, trunc, math.max(x, clip.x), math.max(y, clip.y), translate_color(color))
+        local e = math.min(clip.x + clip.w - x, x + str:ulen())
+        if e > 0 then
+          local trunc = str:usub(s, e)
+          if #trunc > 0 then
+            libquetta.draw_text(font, trunc, math.max(x, clip.x), math.max(y, clip.y), translate_color(color))
+          end
         end
       end
       return x + str:ulen()
     end
 
-    style.padding = { x = 0, y = 0 }
+    style.padding = { x = 1, y = 0 }
     style.caret_width = 1
     style.scrollbar_size = 1
     style.expanded_scrollbar_size = 1
@@ -329,7 +332,18 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.line_height = 1
     
     -- Specific plugin configs for quetta that allow them to actually work with quetta.
-    config.plugins.treeview.visible = false
+    local w, h = system.get_window_size()
+    if config.plugins.treeview ~= false then
+      local TreeView = require "plugins.treeview"
+      local old_update = TreeView.update
+      
+      config.plugins.treeview.size = math.min(40, w / 4)
+      config.plugins.treeview.visible = w > 80
+      function TreeView:update(...)
+        old_update(self, ...)
+        self.item_text_spacing = 1
+      end
+    end
     --config.plugins.treeview = false
     config.plugins.minimap = false
     config.plugins.build.drawer_size = 20
@@ -389,14 +403,14 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     -- also, keep in cntrl+shift for the arrow keys as those ONLY work with shift and not alt, and are used by the window manager
     local keys = {}
     for k,v in pairs(keymap.map) do
-      if k:find("ctrl%+shift") and not k:find("ctrl%+shift%+down") and not k:find("ctrl%+shift%+up") and not k:find("ctrl%+shift%+left") and not k:find("ctrl%+shift%+right") then
+      if k:find("ctrl%+shift") then
         table.insert(keys, k)
       end
     end
     for _, k in pairs(keys) do
       for i,cmd in ipairs({ table.unpack(keymap.map[k]) }) do
-        keymap.unbind(k, cmd)
-        keymap.add({ [k:gsub("shift", "alt")] = cmd })
+        -- keymap.unbind(k, cmd)
+        keymap.add({ [k:gsub("shift", "alt")] = cmd, [k:gsub("shift", "super")] = cmd   })
       end
     end
     keymap.add {
