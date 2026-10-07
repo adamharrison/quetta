@@ -102,6 +102,9 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       if config.plugins.quetta.color_model == "24bit" then
         return (math.floor(tonumber(color[1])) << 24) | (math.floor(tonumber(color[2])) << 16) | (math.floor(tonumber(color[3])) << 8) | math.floor(tonumber(color[4]))
       end
+      if color[1] > 4 and color[1] < 251 and color[1] == color[2] and color[1] == color[3] then -- use the special grey color palette at the end of the color list
+        return math.floor(color[1] / 255 + 0.5) * 23 + 232
+      end
       return (math.floor(color[1] * 5 / 256 + 0.5) * 36) + (math.floor((color[2] / 256 * 5 + 0.5)) * 6) + math.floor((color[3] / 256 * 5 + 0.5)) + 16
     end
 
