@@ -347,6 +347,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
         self.item_text_spacing = 1
       end
     end
+    function system.get_clipboard() return core.cursor_clipboard and core.cursor_clipboard['full'] end
     --config.plugins.treeview = false
     config.plugins.minimap = false
     config.plugins.build.drawer_size = 20
@@ -424,7 +425,8 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     keymap.add {
       ["ctrl+q"] = "core:quit",
       ["alt+pageup"] = "doc:select-to-previous-page",
-      ["alt+pagedown"] = "doc:select-to-next-page"
+      ["alt+pagedown"] = "doc:select-to-next-page",
+      ["ctrl+alt+v"] = "docview:paste"
     }
   end
 else
