@@ -15,7 +15,9 @@ config.plugins.quetta = common.merge({
   mouse_tracking = true,
   -- swaps to the xterm alternate buffer on startup
   use_alternate_buffer = true,
-  -- removes the cursor from being shown
+  -- adds support for the kitty protocol; not actually supported yet
+  use_kitty_protcol = false,
+  -- removes the console cursor from being shown
   disable_cursor = true,
   -- the amount of time that must pass betwene clicks to separate a single click from a double-click
   click_interval = 0.3,
@@ -36,11 +38,18 @@ config.plugins.quetta = common.merge({
 
 if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(ARGS[1]):find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$")) and os.getenv("TERM") then
   local libquetta = require "plugins.quetta.libquetta"
+  global({ QUETTA = true })
+  print = function(...)
+    if select('#', ...) > 1 then
+      io.open("/tmp/log", "ab"):write(...):close()
+    end
+  end
   local status, success_or_err = libquetta.init(config.plugins.quetta.restore, config.plugins.quetta.color_model, function()
       io.stdout:write("\x1B[2J");
       if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003l") end
       if config.plugins.quetta.disable_cursor then io.stdout:write("\x1B[?25h") end
       if config.plugins.quetta.use_alternate_buffer then io.stdout:write("\x1B[?47l") end
+      if config.plugins.quetta.use_kitty_protocol then io.stdout:write("\x1B[<u") end
       io.stdout:write("\x1B[39m");
       io.stdout:write("\x1B[49m");
       io.stdout:write("\x1B8")
@@ -53,7 +62,9 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     if config.plugins.quetta.disable_cursor then io.stdout:write("\x1B[?25l") end -- Disable cursor.
     if config.plugins.quetta.use_alternate_buffer then io.stdout:write("\x1B[?47h") end -- Use alternate screen buffer.
     if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003h") end -- Enable mouse tracking.
+    if config.plugins.quetta.use_kitty_protocol then io.stdout:write("\x1B[>1u") end -- Enable kitty protocol
     io.stdout:flush()
+    
 
     function system.window_has_focus(window) return true end
     function system.get_window_size(window) 
@@ -187,6 +198,8 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       if accumulator:find("^\x1BO.") then accumulator = "" return "keypressed", "f" .. n:byte(3) - string.byte("O") end
       if #accumulator == 2 and accumulator == "\x1B\x7F" then accumulator = "" table.insert(queued_presses, "left alt") table.insert(queued_presses, "backspace") return system.poll_event() end
       if #accumulator == 1 and accumulator == "\x08" then accumulator = "" table.insert(queued_presses, "left ctrl") table.insert(queued_presses, "backspace") return system.poll_event() end
+      -- not sure what's going on with this one, but may as well include it
+      if #accumulator == 1 and accumulator == "\x1E" then accumulator = "" table.insert(queued_presses, "left ctrl") table.insert(queued_presses, "left shift") table.insert(queued_presses, "`") return system.poll_event() end
       if #accumulator == 3 and accumulator == "\x1B[Z" then accumulator = "" table.insert(queued_presses, "left shift") table.insert(queued_presses, "tab") return system.poll_event() end
       if #accumulator == 1 and accumulator == "\x7F" then accumulator = "" return "keypressed", "backspace" end
       if #accumulator == 1 and accumulator == "\x1B" then accumulator = "" return "keypressed", "escape" end
@@ -196,6 +209,14 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
         table.insert(queued_presses, "left ctrl")
         table.insert(queued_presses, "left alt")
         table.insert(queued_presses, string.char(96 + accumulator:byte(2)))
+        accumulator = accumulator:sub(3)
+        return system.poll_event()
+      end
+      if accumulator:find("^\x1B[%w]") then
+        table.insert(queued_presses, "left alt")
+        local char = accumulator:sub(2, 2)
+        if char:find("[A-Z]") then table.insert(queued_presses, "left shift") char = char:lower() end
+        table.insert(queued_presses, char)
         accumulator = accumulator:sub(3)
         return system.poll_event()
       end
@@ -291,6 +312,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     style.divider_size = 0
     core.window_mode = "maximized"
     config.transitions = false
+    config.borderless = true
     config.tab_close_button = false
     
     -- Specific plugin configs for quetta that allow them to actually work with quetta.
@@ -351,6 +373,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
 
     -- rebind anything that's not already bound from shift to alt, because terminal emulators tend to dominate the shift-space.
     -- do this in two steps because if you remove things from the table while iterating it's unstable.
+    -- also, keep in ctrl+shift for the arrow keys as those ONLY work with shift and not alt, and are used by the window manager
     local keys = {}
     for k,v in pairs(keymap.map) do
       if k:find("ctrl%+shift") then
