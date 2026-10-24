@@ -281,6 +281,9 @@ static int restore = 0;
 
 int f_quetta_gc(lua_State* L) {
   if (initialized) {
+    lua_rawgeti(L, LUA_REGISTRYINDEX, initialized);
+    lua_pcall(L, 0, 0, 0);
+    luaL_unref(L, LUA_REGISTRYINDEX, initialized);
     #ifndef _WIN32
       if (!restore) {
         original_term.c_lflag |= (ECHO | ICANON | ISIG | IXON | IEXTEN);
@@ -293,9 +296,6 @@ int f_quetta_gc(lua_State* L) {
         SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), original_mode_out);
       }
     #endif
-    lua_rawgeti(L, LUA_REGISTRYINDEX, initialized);
-    lua_pcall(L, 0, 0, 0);
-    luaL_unref(L, LUA_REGISTRYINDEX, initialized);
   }
   return 0;
 }

@@ -45,14 +45,14 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     end
   end
   local status, success_or_err = libquetta.init(config.plugins.quetta.restore, config.plugins.quetta.color_model, function()
-      io.stdout:write("\x1B[2J");
+      io.stdout:write("\x1B[39m") -- restore foreground color
+      io.stdout:write("\x1B[49m") -- restore background color
+      io.stdout:write("\x1B[2J") -- clear screen
       if config.plugins.quetta.mouse_tracking then io.stdout:write("\x1B[?1003l") end
       if config.plugins.quetta.disable_cursor then io.stdout:write("\x1B[?25h") end
       if config.plugins.quetta.use_alternate_buffer then io.stdout:write("\x1B[?47l") end
       if config.plugins.quetta.use_kitty_protocol then io.stdout:write("\x1B[<u") end
-      io.stdout:write("\x1B[39m");
-      io.stdout:write("\x1B[49m");
-      io.stdout:write("\x1B8")
+      io.stdout:write("\x1B8") -- restore cursor
       io.stdout:flush()
       libquetta.read(0)
   end) 
