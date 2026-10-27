@@ -7,6 +7,7 @@ local common = require "core.common"
 local keymap = require "core.keymap"
 local NagView = require "core.nagview"
 local DocView = require "core.docview"
+local Node = require "core.node"
 local EmptyView = require "core.emptyview"
 
 
@@ -386,6 +387,25 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.scale = false
     config.plugins.scalestatus = false
     SCALE = 1.0
+
+    
+    function Node:get_divider_overlapping_point(px, py)
+      if self.type ~= "leaf" then
+        local axis = self.type == "hsplit" and "x" or "y"
+        if self.a:is_resizable(axis) and self.b:is_resizable(axis) then
+          local p = 1
+          local x, y, w, h = self:get_divider_rect()
+          x, y = x - p, y - p
+          w, h = w + p * 2, h + p * 2
+          if axis == 'y' then y = y - 1 end
+          if px >= x and py >= y and px < x + w and py < y + h then
+            return self
+          end
+        end
+        return self.a:get_divider_overlapping_point(px, py)
+            or self.b:get_divider_overlapping_point(px, py)
+      end
+    end
 
     
     -- Custom EmptyView
