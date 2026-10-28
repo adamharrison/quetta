@@ -7,6 +7,7 @@ local common = require "core.common"
 local keymap = require "core.keymap"
 local NagView = require "core.nagview"
 local DocView = require "core.docview"
+local TitleView = require "core.titleview"
 local Node = require "core.node"
 local EmptyView = require "core.emptyview"
 
@@ -106,7 +107,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     else
       function renderer:get_size() return libquetta.size() end
     end
-    function NagView:get_buttons_height() return 1 end
+    function NagView:get_buttons_height() return 3 end
 
     local function translate_color(color)
       if not color then return 0 end
@@ -389,6 +390,7 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     config.plugins.scale = false
     config.plugins.scalestatus = false
     SCALE = 1.0
+    
 
     
     function Node:get_divider_overlapping_point(px, py)
@@ -410,6 +412,13 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
     end
 
     
+    function TitleView:draw_window_title()
+      local ox, oy = self:get_content_offset()
+      local x, y = ox + style.padding.x, oy + style.padding.y
+      x = common.draw_text(style.icon_font, style.caret, "Q ", nil, x, y, 0, 1)
+      local title = self.root_view.window:compose_window_title(self.root_view.window.title)
+      common.draw_text(style.font, style.text, title, nil, x, y, 0, 1)
+    end
     -- Custom EmptyView
     local function draw_text(x, y, color)
       local lines = {
