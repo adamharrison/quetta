@@ -35,7 +35,11 @@ config.plugins.quetta = common.merge({
   -- this may or may not be fixed in SDL3. You can choose whether to enable this or
   -- not; if you do, then you'll get a clipboard, but you'll use extra resources
   -- and it'll be a slower startup.
-  create_invisible_window = true
+  create_invisible_window = not os.getenv("QUETTA_NO_WINDOW"),
+  -- emit curor shape change system escape codes
+  -- won't work in all terminals. You can specify a translation table here if you want
+  -- which conforms to what your terminal is expecting, or set to false to stop emitting events
+  change_cursors = { ibeam = "text", sizeh = "ew-resize", sizev = "ns-resize", arrow = "default"  }
 }, config.plugins.quetta)
 
 if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(ARGS[1]):find("^" .. config.plugins.quetta.invoke_only_on_executable_name .. "$")) and os.getenv("TERM") then
@@ -89,6 +93,11 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       function system.set_window_size(window) end
     else
       function renderer:get_size() return libquetta.size() end
+    end
+    function system.set_cursor(cursor)
+      if config.plugins.quetta.change_cursors then
+        io.stdout:write("\x1B]22;" .. (config.plugins.quetta.change_cursors[cursor] or cursor) .. "\x1B\\")
+      end
     end
     function NagView:get_buttons_height() return 3 end
 
