@@ -247,7 +247,9 @@ if (not config.plugins.quetta.invoke_only_on_executable_name or common.basename(
       end
       if accumulator:find("^[\x01-\x1F]") and not accumulator:sub(2,2):find("%[") then
         table.insert(queued_presses, "left ctrl")
-        table.insert(queued_presses, string.char(96 + accumulator:byte(1)))
+        local char = string.char(96 + accumulator:byte(1))
+        if char == "|" then char = "\\" end
+        table.insert(queued_presses, char)
         accumulator = accumulator:sub(2)
         return system.poll_event()
       end
